@@ -1,0 +1,285 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --text: #1c2026;
+  --muted: #68717d;
+  --border: #d9dde3;
+  --accent: #2563eb;
+  --accent-soft: #e4edff;
+  --danger: #c62828;
+  --danger-soft: #fdecec;
+  --warn: #9a6700;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c;
+    --surface: #1d2128;
+    --text: #e6e9ee;
+    --muted: #97a0ad;
+    --border: #333a45;
+    --accent: #6ea0ff;
+    --accent-soft: #23314f;
+    --danger: #ff7b7b;
+    --danger-soft: #472427;
+    --warn: #e0b040;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  max-width: 1100px;
+}
+
+.sidebar,
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.panel + .panel {
+  margin-top: 16px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.status {
+  min-height: 1.45em;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.banner {
+  max-width: 1100px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  padding: 4px 10px;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+input:focus,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+input.is-invalid {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Presets */
+
+.presets {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.preset {
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.preset.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.preset:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.preset-label {
+  display: block;
+  font-weight: 600;
+}
+
+.preset-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preset:disabled .preset-meta {
+  color: var(--warn);
+}
+
+/* Table */
+
+.matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px;
+  table-layout: fixed;
+}
+
+.matrix th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.matrix thead th {
+  text-align: right;
+  padding-right: 8px;
+}
+
+.matrix thead th span,
+.matrix tbody th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.matrix thead th span {
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.matrix tbody th {
+  width: 84px;
+  text-align: left;
+}
+
+.matrix input {
+  width: 100%;
+}
+
+.matrix input.is-anchor {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.matrix input.is-invalid {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Exchange rates */
+
+.rates {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.rates li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rates input {
+  width: 110px;
+}
+
+.rates .edited {
+  font-size: 12px;
+  color: var(--warn);
+}
+
+@media (max-width: 700px) {
+  body {
+    padding: 16px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .matrix {
+    border-spacing: 3px;
+  }
+
+  .matrix tbody th {
+    width: 64px;
+  }
+
+  .matrix input {
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+}

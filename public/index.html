@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Income rates</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Income rates</h1>
+  </header>
+
+  <div id="banner" class="banner" role="alert" hidden></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Presets</h2>
+      <ul id="presets" class="presets"></ul>
+      <p id="presets-error" class="note error" hidden></p>
+    </aside>
+
+    <main id="main" hidden>
+      <section class="panel">
+        <table id="matrix" class="matrix"></table>
+        <p id="assumptions" class="note"></p>
+        <p id="status" class="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exchange rates</h2>
+          <button id="reset-rates" type="button">Reset to file</button>
+        </div>
+        <ul id="rates" class="rates"></ul>
+        <p class="note">
+          Changes here apply to this page only. Edit <code>data/exchange-rates.json</code> to change the defaults.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
