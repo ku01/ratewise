@@ -1,7 +1,7 @@
 const fail = (error) => ({ ok: false, error });
 
 // Validates the parsed exchange-rates file. On success returns
-// {ok, config: {base, currencies, rates: {CODE: rate}, aliases: Map<lowercase, CODE>}}.
+// {ok, config: {base, currencies, rates: {CODE: rate}}}.
 // Currency order is the table column order.
 export function validateRatesConfig(json) {
   if (!json || typeof json !== 'object' || !Array.isArray(json.currencies)) {
@@ -11,7 +11,6 @@ export function validateRatesConfig(json) {
 
   const currencies = [];
   const rates = {};
-  const aliases = new Map();
   for (const entry of json.currencies) {
     const code = entry?.code;
     if (typeof code !== 'string' || code === '') return fail('a currency has no "code"');
@@ -21,13 +20,6 @@ export function validateRatesConfig(json) {
       return fail(`rate of ${code} must be a number greater than 0`);
     }
     const symbol = typeof entry.symbol === 'string' && entry.symbol !== '' ? entry.symbol : code;
-    const listed = Array.isArray(entry.aliases) ? entry.aliases : [];
-    for (const alias of new Set([code, symbol, ...listed].map((a) => String(a).toLowerCase()))) {
-      if (aliases.has(alias)) {
-        return fail(`alias "${alias}" is used by both ${aliases.get(alias)} and ${code}`);
-      }
-      aliases.set(alias, code);
-    }
     rates[code] = rate;
     currencies.push({ code, symbol, rate });
   }
@@ -35,5 +27,5 @@ export function validateRatesConfig(json) {
   if (!(json.base in rates)) return fail(`base currency "${json.base}" is not in "currencies"`);
   if (rates[json.base] !== 1) return fail(`rate of the base currency ${json.base} must be 1`);
 
-  return { ok: true, config: { base: json.base, currencies, rates, aliases } };
+  return { ok: true, config: { base: json.base, currencies, rates } };
 }

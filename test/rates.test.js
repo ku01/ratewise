@@ -18,12 +18,11 @@ test('the shipped exchange-rates.json is valid', () => {
   );
 });
 
-test('valid config exposes rates and case-insensitive aliases', () => {
+test('valid config exposes rates and symbols', () => {
   const { config } = validateRatesConfig(RATES_JSON);
   assert.deepEqual(config.rates, { PLN: 1, EUR: 4.25, USD: 3.65, RUB: 0.045 });
-  assert.equal(config.aliases.get('$'), 'USD');
-  assert.equal(config.aliases.get('usd'), 'USD');
-  assert.equal(config.aliases.get('zł'), 'PLN');
+  assert.equal(config.base, 'PLN');
+  assert.deepEqual(config.currencies[2], { code: 'USD', symbol: '$', rate: 3.65 });
 });
 
 test('rejects invalid configs', () => {
@@ -36,5 +35,4 @@ test('rejects invalid configs', () => {
   assert.equal(withCurrencies((j) => (j.currencies[1].rate = -1)).ok, false);
   assert.equal(withCurrencies((j) => (j.currencies[1].rate = '4.25')).ok, false);
   assert.equal(withCurrencies((j) => (j.currencies[2].code = 'EUR')).ok, false);
-  assert.equal(withCurrencies((j) => j.currencies[2].aliases.push('EURO')).ok, false);
 });

@@ -9,10 +9,10 @@ export const readData = (name) =>
 export const RATES_JSON = {
   base: 'PLN',
   currencies: [
-    { code: 'PLN', symbol: 'zł', aliases: ['pln', 'zł', 'zl', 'zloty'], rate: 1 },
-    { code: 'EUR', symbol: '€', aliases: ['eur', '€', 'euro'], rate: 4.25 },
-    { code: 'USD', symbol: '$', aliases: ['usd', '$', 'dollar', 'dollars'], rate: 3.65 },
-    { code: 'RUB', symbol: '₽', aliases: ['rub', '₽', 'rur', 'руб', 'р'], rate: 0.045 },
+    { code: 'PLN', symbol: 'zł', rate: 1 },
+    { code: 'EUR', symbol: '€', rate: 4.25 },
+    { code: 'USD', symbol: '$', rate: 3.65 },
+    { code: 'RUB', symbol: '₽', rate: 0.045 },
   ],
 };
 

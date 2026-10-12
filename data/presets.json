@@ -1,6 +1,6 @@
 [
-  "100 pln per hour",
-  "$2000 monthly",
-  "$300-400 daily",
-  { "rate": "€50000", "period": "annual", "label": "Gross" }
+  { "amount": 100, "currency": "PLN", "period": "hourly" },
+  { "amount": 2000, "currency": "USD", "period": "monthly" },
+  { "amount": [300, 400], "currency": "USD", "period": "daily" },
+  { "amount": 50000, "currency": "EUR", "period": "annual", "label": "Gross" }
 ]

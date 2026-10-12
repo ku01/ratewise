@@ -75,8 +75,6 @@ async function loadPresets() {
   }
 }
 
-// Presets are resolved against the rates from the file, so a guessed period
-// does not change while the user edits rates in the page.
 function resolvePresets() {
   state.presets = state.presetEntries.map((entry, i) =>
     resolvePreset(entry, state.ratesConfig, CONFIG, i),
@@ -193,9 +191,7 @@ function wireInputs(container, commit) {
 function renderPresets() {
   presetsList.replaceChildren(
     ...state.presets.map((preset, i) => {
-      const meta = preset.ok
-        ? preset.period + (preset.periodGuessed ? ' (guessed)' : '')
-        : `Cannot read: ${preset.error}`;
+      const meta = preset.ok ? preset.period : `Cannot read: ${preset.error}`;
       const button = make('button', { type: 'button', className: 'preset', disabled: !preset.ok }, [
         make('span', { className: 'preset-label', textContent: preset.label }),
         make('span', { className: 'preset-meta', textContent: meta }),

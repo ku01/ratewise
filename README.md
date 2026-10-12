@@ -18,7 +18,7 @@ Both files are read from disk on every page load, so edit a file and reload; no 
 
 ### `data/exchange-rates.json`
 
-Each `rate` is how many units of the base currency one unit of that currency buys. The base currency must have rate 1. The order of `currencies` is the column order, and `aliases` are the names accepted in presets.
+Each `rate` is how many units of the base currency one unit of that currency buys. The base currency must have rate 1. The order of `currencies` is the column order.
 
 **The shipped rates are placeholders. Replace them with real ones.**
 
@@ -26,26 +26,28 @@ Rates can also be edited in the page. Those edits apply to the open page only an
 
 ### `data/presets.json`
 
-A JSON array of the rates shown in the sidebar. Each entry is a string or an object:
+A JSON array of the rates shown in the sidebar. Each entry is an object:
 
 ```json
 [
-  "$5000",
-  "120 pln per hour",
-  "$300-320",
-  "€45/h",
-  { "rate": "$90000", "period": "annual" },
-  { "rate": "25000 zł", "period": "monthly", "label": "Target offer" }
+  { "amount": 5000, "currency": "USD", "period": "monthly" },
+  { "amount": [300, 320], "currency": "USD", "period": "daily" },
+  { "amount": 25000, "currency": "PLN", "period": "monthly", "label": "Target offer" }
 ]
 ```
 
-A string is `[currency] amount [currency] [period]`, where the period is written like `per hour`, `/h`, `hourly`, `a day`, `monthly`, `per year`.
+| Field | Required | Value |
+|---|---|---|
+| `amount` | yes | a number, or `[min, max]` for a range |
+| `currency` | yes | a `code` from `data/exchange-rates.json` |
+| `period` | yes | `hourly`, `daily`, `monthly` or `annual` |
+| `label` | no | text shown in the sidebar; defaults to the amount and currency |
 
-When a preset has no period, it is guessed from the amount converted to the base currency: under 600 is hourly, under 4000 daily, under 80000 monthly, otherwise annual. The sidebar shows the result as "(guessed)". For amounts near those limits, state the period explicitly.
+An entry that does not fit this shape is still listed, disabled, with the reason.
 
 ## Assumptions
 
-- 8 hours per day, 21 days per month, 12 months per year. Change them in `public/js/config.js`, along with the guess thresholds and the decimals shown per row.
+- 8 hours per day, 21 days per month, 12 months per year. Change them in `public/js/config.js`, along with the decimals shown per row.
 - The app is stateless: the server only serves files, and everything you edit lives in the page until you reload.
 - The highlighted cell is the one you last entered. The others are computed from it at full precision, so rounding never accumulates.
 - In a table cell, a single separator followed by exactly three digits is a thousands separator: `1,234` and `1.234` both mean 1234. Exchange rate inputs always read a single separator as a decimal point.
