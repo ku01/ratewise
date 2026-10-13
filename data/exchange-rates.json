@@ -1,10 +1,10 @@
 {
-  "_comment": "PLACEHOLDER VALUES. Replace each rate with a real one. rate = how many units of the base currency one unit of this currency buys.",
-  "base": "PLN",
+  "_comment": "PLACEHOLDER VALUES. Replace each rate with a real one. rate = how many units of this currency one unit of the base currency buys.",
+  "base": "USD",
   "currencies": [
-    { "code": "PLN", "symbol": "zł", "rate": 1 },
-    { "code": "EUR", "symbol": "€", "rate": 4.25 },
-    { "code": "USD", "symbol": "$", "rate": 3.65 },
-    { "code": "RUB", "symbol": "₽", "rate": 0.045 }
+    { "code": "PLN", "symbol": "zł", "rate": 3.65 },
+    { "code": "EUR", "symbol": "€", "rate": 0.859 },
+    { "code": "USD", "symbol": "$", "rate": 1 },
+    { "code": "RUB", "symbol": "₽", "rate": 81.3 }
   ]
 }

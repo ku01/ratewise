@@ -18,7 +18,7 @@ Both files are read from disk on every page load, so edit a file and reload; no 
 
 ### `data/exchange-rates.json`
 
-Each `rate` is how many units of the base currency one unit of that currency buys. The base currency must have rate 1. The order of `currencies` is the column order.
+Each `rate` is how many units of that currency one unit of the base currency (USD) buys. The base currency must have rate 1. The order of `currencies` is the column order.
 
 **The shipped rates are placeholders. Replace them with real ones.**
 

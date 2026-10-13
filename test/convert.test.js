@@ -29,13 +29,13 @@ for (const example of EXAMPLES) {
 
 test('unrounded values', () => {
   const a = computeTable(EXAMPLES[0].anchor, RATES, CONFIG);
-  close(a.hourly.EUR.min, 120 / 4.25);
-  close(a.monthly.EUR.min, 20160 / 4.25);
-  close(a.annual.RUB.min, 5376000);
+  close(a.hourly.EUR.min, (120 / 3.65) * 0.859);
+  close(a.monthly.EUR.min, (20160 / 3.65) * 0.859);
+  close(a.annual.RUB.min, (241920 / 3.65) * 81.3);
   const b = computeTable(EXAMPLES[1].anchor, RATES, CONFIG);
   close(b.hourly.PLN.min, 136.875);
   close(b.hourly.PLN.max, 146);
-  close(b.annual.RUB.max, 6540800);
+  close(b.annual.RUB.max, 80640 * 81.3);
 });
 
 test('anchor cell has factor 1', () => {
@@ -56,12 +56,12 @@ test('round trip through any cell recovers the anchor', () => {
 });
 
 test('changing one rate changes only that column', () => {
-  const before = computeTable(EXAMPLES[0].anchor, RATES, CONFIG);
-  const after = computeTable(EXAMPLES[0].anchor, { ...RATES, USD: 4 }, CONFIG);
-  const usd = CONFIG.periods.map((p) => formatRange(after[p].USD.min, after[p].USD.max, 0));
-  assert.deepEqual(usd, ['30', '240', '5 040', '60 480']);
+  const before = computeTable(EXAMPLES[2].anchor, RATES, CONFIG);
+  const after = computeTable(EXAMPLES[2].anchor, { ...RATES, EUR: 0.8 }, CONFIG);
+  const eur = CONFIG.periods.map((p) => formatRange(after[p].EUR.min, after[p].EUR.max, 0));
+  assert.deepEqual(eur, ['24', '190', '4 000', '48 000']);
   for (const period of CONFIG.periods) {
-    for (const code of ['PLN', 'EUR', 'RUB']) {
+    for (const code of ['PLN', 'USD', 'RUB']) {
       assert.deepEqual(after[period][code], before[period][code]);
     }
   }

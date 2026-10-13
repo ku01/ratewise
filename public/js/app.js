@@ -225,6 +225,7 @@ function applyPreset(index) {
 
 function renderRates() {
   const { base, currencies } = state.ratesConfig;
+  const baseSymbol = currencies.find((c) => c.code === base).symbol;
   ratesList.replaceChildren(
     make('li', { textContent: `Base: ${base}` }),
     ...currencies
@@ -232,12 +233,12 @@ function renderRates() {
       .map((c) => {
         const text = String(state.rates[c.code]);
         const input = make('input', { type: 'text', inputMode: 'decimal', autocomplete: 'off', value: text });
-        input.setAttribute('aria-label', `${base} per 1 ${c.code}`);
+        input.setAttribute('aria-label', `${c.code} per 1 ${base}`);
         input.dataset.currency = c.code;
         input.dataset.rendered = text;
         const edited = make('span', { className: 'edited', textContent: 'edited' });
         edited.hidden = state.rates[c.code] === c.rate;
-        return make('li', {}, [`1 ${c.symbol} =`, input, base, edited]);
+        return make('li', {}, [`1 ${baseSymbol} =`, input, c.code, edited]);
       }),
   );
 }
