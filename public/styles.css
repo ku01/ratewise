@@ -49,6 +49,7 @@ h1 {
 
 h2 {
   margin: 0;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -58,9 +59,10 @@ h2 {
 
 .layout {
   display: grid;
-  /* The main column grows with the table, so many currencies widen the
-     page instead of squeezing the columns. */
-  grid-template-columns: 240px max-content;
+  /* The main column is as wide as the table: many currencies widen the page
+     instead of squeezing the columns, and one currency leaves no empty space
+     (notes wrap to the table width). */
+  grid-template-columns: 240px min-content;
   gap: 16px;
   align-items: start;
 }
@@ -260,11 +262,64 @@ input.is-invalid {
   display: none;
 }
 
+.combo {
+  position: relative;
+}
+
 .currency-tools input {
   width: 260px;
   font-size: 14px;
   padding: 4px 8px;
   text-align: left;
+}
+
+.combo-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  width: max(100%, 300px);
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+  font-size: 14px;
+}
+
+.combo-list[hidden] {
+  display: none;
+}
+
+.combo-option {
+  display: flex;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.combo-option.is-active {
+  background: var(--accent-soft);
+}
+
+.combo-code {
+  width: 3.2em;
+  flex: none;
+  font-weight: 600;
+}
+
+.combo-name {
+  color: var(--muted);
+}
+
+.combo-empty {
+  padding: 5px 8px;
+  color: var(--muted);
 }
 
 .col-remove {
@@ -369,7 +424,9 @@ input.is-invalid {
     overflow-x: auto;
   }
 
-  .currency-tools input {
+  .combo,
+  .currency-tools input,
+  .combo-list {
     width: 100%;
   }
 

@@ -26,9 +26,12 @@
     <main id="main" hidden>
       <section class="panel">
         <div id="currency-tools" class="currency-tools">
-          <input id="add-currency" type="text" list="currency-list" autocomplete="off" spellcheck="false"
-            placeholder="Add currency…" aria-label="Add currency by code or name">
-          <datalist id="currency-list"></datalist>
+          <div class="combo">
+            <input id="add-currency" type="text" autocomplete="off" spellcheck="false"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="currency-options"
+              placeholder="Add currency…" aria-label="Add currency by code or name">
+            <ul id="currency-options" class="combo-list" role="listbox" aria-label="Currencies" hidden></ul>
+          </div>
         </div>
         <div class="matrix-wrap">
           <table id="matrix" class="matrix"></table>

@@ -165,13 +165,88 @@ function renderTable() {
 
 const currencyLabel = (c) => (c.symbol === c.code ? c.name : `${c.name} (${c.symbol})`);
 
-// The picker is a text box with suggestions, matched by code or name.
+// The picker is a text box with its own dropdown of currencies not yet shown,
+// filtered by code or name as the user types.
+const availableCurrencies = () => state.ratesConfig.currencies.filter((c) => !state.columns.includes(c.code));
+
+const picker = { matches: [], active: -1 };
+
 function renderCurrencyPicker() {
-  const available = state.ratesConfig.currencies.filter((c) => !state.columns.includes(c.code));
-  el('currency-list').replaceChildren(
-    ...available.map((c) => make('option', { value: c.code, label: currencyLabel(c) })),
+  el('currency-tools').hidden = availableCurrencies().length === 0;
+  if (isPickerOpen()) openPicker();
+}
+
+// Codes starting with the query come first, then names containing it.
+function matchCurrencies(text) {
+  const query = text.trim().toLowerCase();
+  const available = availableCurrencies();
+  if (!query) return available;
+  const byCode = available.filter((c) => c.code.toLowerCase().startsWith(query));
+  const byName = available.filter((c) => !byCode.includes(c) && c.name.toLowerCase().includes(query));
+  return [...byCode, ...byName];
+}
+
+const isPickerOpen = () => !el('currency-options').hidden;
+
+function openPicker() {
+  const input = el('add-currency');
+  const list = el('currency-options');
+  picker.matches = matchCurrencies(input.value);
+  picker.active = input.value.trim() && picker.matches.length ? 0 : -1;
+  list.replaceChildren(
+    ...(picker.matches.length
+      ? picker.matches.map((c) =>
+          make('li', { id: `currency-option-${c.code}`, className: 'combo-option', role: 'option' }, [
+            make('span', { className: 'combo-code', textContent: c.code }),
+            make('span', { className: 'combo-name', textContent: currencyLabel(c) }),
+          ]),
+        )
+      : [make('li', { className: 'combo-empty', textContent: 'No matching currency' })]),
   );
-  el('currency-tools').hidden = available.length === 0;
+  for (const [i, option] of [...list.querySelectorAll('.combo-option')].entries()) option.dataset.index = i;
+  list.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  highlightOption(picker.active);
+}
+
+function closePicker() {
+  el('currency-options').hidden = true;
+  const input = el('add-currency');
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
+}
+
+function highlightOption(index) {
+  picker.active = index;
+  const input = el('add-currency');
+  const options = el('currency-options').querySelectorAll('.combo-option');
+  options.forEach((option, i) => {
+    option.classList.toggle('is-active', i === index);
+    option.setAttribute('aria-selected', String(i === index));
+  });
+  if (index >= 0) {
+    input.setAttribute('aria-activedescendant', options[index].id);
+    options[index].scrollIntoView({ block: 'nearest' });
+  } else {
+    input.removeAttribute('aria-activedescendant');
+  }
+}
+
+function moveHighlight(step) {
+  if (!isPickerOpen()) openPicker();
+  const count = picker.matches.length;
+  if (!count) return;
+  const from = picker.active < 0 ? (step > 0 ? -1 : count) : picker.active;
+  highlightOption((from + step + count) % count);
+}
+
+function pickCurrency(code) {
+  const input = el('add-currency');
+  input.value = '';
+  setInvalid(input, false);
+  setStatus();
+  closePicker();
+  addColumn(code);
 }
 
 // Text typed in the picker → {code} of a currency not yet shown, or {error}.
@@ -179,7 +254,7 @@ function findCurrency(text) {
   const typed = text.trim();
   const query = typed.toLowerCase();
   if (state.columns.includes(typed.toUpperCase())) return { error: `${typed.toUpperCase()} is already in the table.` };
-  const available = state.ratesConfig.currencies.filter((c) => !state.columns.includes(c.code));
+  const available = availableCurrencies();
   const exact = available.find((c) => c.code.toLowerCase() === query || c.name.toLowerCase() === query);
   if (exact) return { code: exact.code };
   const partial = available.filter((c) => c.name.toLowerCase().includes(query));
@@ -189,18 +264,19 @@ function findCurrency(text) {
 }
 
 function addFromPicker() {
-  const picker = el('add-currency');
-  if (!picker.value.trim()) return;
-  const { code, error } = findCurrency(picker.value);
+  const input = el('add-currency');
+  if (isPickerOpen() && picker.active >= 0) {
+    pickCurrency(picker.matches[picker.active].code);
+    return;
+  }
+  if (!input.value.trim()) return;
+  const { code, error } = findCurrency(input.value);
   if (error) {
-    setInvalid(picker, true);
+    setInvalid(input, true);
     setStatus(error);
     return;
   }
-  setInvalid(picker, false);
-  setStatus();
-  picker.value = '';
-  addColumn(code);
+  pickCurrency(code);
 }
 
 function refreshColumns() {
@@ -245,18 +321,41 @@ function wireCurrencies() {
     const button = e.target.closest('button.col-remove');
     if (button) removeColumn(button.dataset.currency);
   });
-  const picker = el('add-currency');
-  // "change" fires when a suggestion is picked or the box loses focus.
-  picker.addEventListener('change', addFromPicker);
-  picker.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') addFromPicker();
-    else if (e.key === 'Escape') {
-      picker.value = '';
-      setInvalid(picker, false);
-      setStatus();
+  const input = el('add-currency');
+  const list = el('currency-options');
+  input.addEventListener('focus', openPicker);
+  input.addEventListener('click', () => isPickerOpen() || openPicker());
+  input.addEventListener('blur', closePicker);
+  input.addEventListener('input', () => {
+    setInvalid(input, false);
+    openPicker();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveHighlight(e.key === 'ArrowDown' ? 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      addFromPicker();
+    } else if (e.key === 'Escape') {
+      if (isPickerOpen()) closePicker();
+      else {
+        input.value = '';
+        setInvalid(input, false);
+        setStatus();
+      }
     }
   });
-  picker.addEventListener('input', () => setInvalid(picker, false));
+  // Keep focus in the text box while clicking the list.
+  list.addEventListener('mousedown', (e) => e.preventDefault());
+  list.addEventListener('mousemove', (e) => {
+    const option = e.target.closest('.combo-option');
+    if (option && Number(option.dataset.index) !== picker.active) highlightOption(Number(option.dataset.index));
+  });
+  list.addEventListener('click', (e) => {
+    const option = e.target.closest('.combo-option');
+    if (option) pickCurrency(picker.matches[Number(option.dataset.index)].code);
+  });
 }
 
 function commitCell(input) {
