@@ -5,12 +5,13 @@ import { parseAmount, parseNumber } from './parse.js';
 import { resolvePreset } from './presets.js';
 import { validateRatesConfig } from './rates.js';
 
-const RATES_URL = 'data/exchange-rates.json';
+const RATES_URL = 'api/exchange-rates';
 const PRESETS_URL = 'data/presets.json';
 
 // All state lives here and is lost on reload; nothing is written back.
 const state = {
-  ratesConfig: null, // as loaded from the file
+  ratesConfig: null, // as loaded from the API endpoint
+  ratesMeta: null, // {requestedDate, date, source, warning}
   rates: {}, // in-page, editable copy: {CODE: rate}
   anchor: null, // last user-entered cell: {period, currency, min, max, text}
   presetEntries: null, // raw presets file content
@@ -33,7 +34,10 @@ function make(tag, props = {}, children = []) {
 
 async function fetchJson(url) {
   const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  if (!res.ok) {
+    const text = (await res.text().catch(() => '')).trim();
+    throw new Error(`${url}: HTTP ${res.status}${text ? ` – ${text}` : ''}`);
+  }
   try {
     return await res.json();
   } catch {
@@ -54,10 +58,13 @@ function setInvalid(input, invalid) {
 // ---- Loading ----
 
 async function loadRates() {
-  const result = validateRatesConfig(await fetchJson(RATES_URL));
+  const json = await fetchJson(RATES_URL);
+  const result = validateRatesConfig(json);
   if (!result.ok) throw new Error(`${RATES_URL}: ${result.error}`);
   state.ratesConfig = result.config;
   state.rates = { ...result.config.rates };
+  const { requestedDate = null, date = null, source = RATES_URL, warning = null } = json;
+  state.ratesMeta = { requestedDate, date, source, warning };
   if (state.anchor && !(state.anchor.currency in state.rates)) state.anchor = null;
 }
 
@@ -243,6 +250,19 @@ function renderRates() {
   );
 }
 
+function renderRatesMeta() {
+  const { requestedDate, date, source, warning } = state.ratesMeta;
+  let text = `Rates from ${source}`;
+  if (date) {
+    text = `Rates as of ${date} · ${source}`;
+    if (requestedDate && date < requestedDate) text += ` (latest available for ${requestedDate})`;
+  }
+  el('rates-source').textContent = text;
+  const box = el('rates-warning');
+  box.textContent = warning ?? '';
+  box.hidden = !warning;
+}
+
 function commitRate(input) {
   const text = input.value;
   if (text === input.dataset.rendered) return;
@@ -273,6 +293,7 @@ async function resetRates() {
   resolvePresets();
   buildTable();
   renderRates();
+  renderRatesMeta();
   renderTable();
   renderPresets();
 }
@@ -305,6 +326,7 @@ async function init() {
   resolvePresets();
   buildTable();
   renderRates();
+  renderRatesMeta();
   el('main').hidden = false;
 
   const first = state.presets.findIndex((p) => p.ok);
