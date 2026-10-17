@@ -58,7 +58,7 @@ h2 {
   grid-template-columns: 240px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
-  max-width: 1100px;
+  max-width: 1200px;
 }
 
 .sidebar,
@@ -98,7 +98,7 @@ h2 {
 }
 
 .banner {
-  max-width: 1100px;
+  max-width: 1200px;
   margin-bottom: 16px;
   padding: 12px 16px;
   border: 1px solid var(--danger);
@@ -249,7 +249,6 @@ input.is-invalid {
 
 .currency-tools {
   display: flex;
-  justify-content: flex-end;
   margin-bottom: 4px;
 }
 
@@ -280,11 +279,15 @@ input.is-invalid {
   border-color: var(--danger);
 }
 
+/* Every currency column has the same fixed width, whatever their number;
+   the table scrolls sideways when it does not fit. */
+.matrix-wrap {
+  overflow-x: auto;
+}
+
 .matrix {
-  width: 100%;
   border-collapse: separate;
   border-spacing: 6px;
-  table-layout: fixed;
 }
 
 .matrix th {
@@ -314,7 +317,7 @@ input.is-invalid {
 }
 
 .matrix input {
-  width: 100%;
+  width: 180px;
 }
 
 .matrix input.is-anchor {
@@ -372,6 +375,7 @@ input.is-invalid {
   }
 
   .matrix input {
+    width: 140px;
     padding: 6px 4px;
     font-size: 13px;
   }
