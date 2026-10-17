@@ -2,13 +2,12 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRatesProvider, FILE_SOURCE } from './exchange-rates.js';
-import { validateRatesConfig } from './public/js/rates.js';
+import { createRatesProvider } from './exchange-rates.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
-const DATA_FILES = new Set(['/data/presets.json', '/data/exchange-rates.json']);
+const DATA_FILES = new Set(['/data/presets.json']);
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 const RATES_API = '/api/exchange-rates';
@@ -36,23 +35,20 @@ function resolveFile(pathname) {
 }
 
 // Exchange rates for yesterday's local date are fetched from public APIs by
-// /api/exchange-rates (with data/exchange-rates.json as the currency template
-// and last-resort fallback); API results are cached in memory per day.
+// /api/exchange-rates and cached in memory per day. If every API fails the
+// endpoint answers 502 with the reason, which the page shows in its banner.
 async function serveRates(req, res) {
-  let template;
+  let body;
   try {
-    template = JSON.parse(await readFile(path.join(DATA_DIR, 'exchange-rates.json'), 'utf8'));
-    const result = validateRatesConfig(template);
-    if (!result.ok) throw new Error(result.error);
+    body = JSON.stringify(await getRates(), null, 2);
   } catch (e) {
-    return send(res, 500, `${FILE_SOURCE}: ${e.message}`);
+    return send(res, 502, e.message);
   }
-  const body = JSON.stringify(await getRates(template), null, 2);
   send(res, 200, req.method === 'HEAD' ? undefined : body, CONTENT_TYPES['.json']);
 }
 
-// Files and the exchange-rate template are read from disk on every request,
-// so editing a data file and reloading the page is enough. Exchange rates come
+// Files are read from disk on every request, so editing a data file and
+// reloading the page is enough. Exchange rates come
 // from /api/exchange-rates, which is cached per day.
 const server = createServer(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed');

@@ -1,6 +1,6 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRatesProvider, localYesterday, FILE_SOURCE } from '../exchange-rates.js';
+import { createRatesProvider, localYesterday, CURRENCIES } from '../exchange-rates.js';
 import { validateRatesConfig } from '../public/js/rates.js';
 import { RATES_JSON } from './fixtures.js';
 
@@ -72,7 +72,6 @@ test('Frankfurter success', async () => {
     date: '2026-10-16',
     source: 'Frankfurter',
     sourceUrl: FRANKFURTER,
-    warning: null,
   });
   assert.equal(validateRatesConfig(result).ok, true);
 });
@@ -108,15 +107,17 @@ describe('Frankfurter rejected → jsDelivr', () => {
       assert.equal(result.source, 'currency-api (jsDelivr)');
       assert.equal(result.sourceUrl, JSDELIVR);
       assert.equal(result.date, '2026-10-16');
-      assert.equal(result.warning, null);
       assert.deepEqual(ratesOf(result), { PLN: 3.89, EUR: 0.8901, USD: 1, RUB: 83.7 });
     });
   }
-  test('error messages are reported in the fallback warning', async () => {
+  test('error messages are reported in the rejection', async () => {
     for (const [name, [handler, message]] of Object.entries(cases)) {
       const fetch = fakeFetch([['https://api.frankfurter.dev/', handler]]);
-      const result = await createRatesProvider({ fetch, now: fixedNow })(RATES_JSON);
-      assert.match(result.warning, new RegExp(`Frankfurter: [^;]*${message}`), name);
+      await assert.rejects(
+        createRatesProvider({ fetch, now: fixedNow })(RATES_JSON),
+        new RegExp(`Frankfurter: [^;]*${message}`),
+        name,
+      );
     }
   });
 });
@@ -134,28 +135,21 @@ test('jsDelivr 404 → pages.dev mirror', async () => {
   assert.equal(ratesOf(result).RUB, 83.7);
 });
 
-test('all sources fail → file fallback', async () => {
+test('all sources fail → rejects with every error', async () => {
   const fetch = fakeFetch([
     ['https://api.frankfurter.dev/', () => json([], 503)],
     ['https://cdn.jsdelivr.net/', () => json({}, 404)],
   ]);
-  const result = await createRatesProvider({ fetch, now: fixedNow })(RATES_JSON);
+  const error = await createRatesProvider({ fetch, now: fixedNow })(RATES_JSON).catch((e) => e);
   assert.equal(fetch.calls.length, 3);
-  assert.deepEqual(result.currencies, RATES_JSON.currencies);
-  assert.equal(result.base, 'USD');
-  assert.equal(result.source, FILE_SOURCE);
-  assert.equal(result.sourceUrl, null);
-  assert.equal(result.date, null);
-  assert.equal(result.requestedDate, '2026-10-16');
-  assert.equal(validateRatesConfig(result).ok, true);
+  assert.ok(error instanceof Error);
   for (const part of [
     '2026-10-16',
     'Frankfurter: HTTP 503',
     'currency-api (jsDelivr): HTTP 404',
     'currency-api (pages.dev): fetch failed',
-    FILE_SOURCE,
   ]) {
-    assert.ok(result.warning.includes(part), `warning mentions ${part}: ${result.warning}`);
+    assert.ok(error.message.includes(part), `error mentions ${part}: ${error.message}`);
   }
 });
 
@@ -172,8 +166,10 @@ test('timeout falls through with "timeout"', async () => {
   assert.equal((await getRates(RATES_JSON)).source, 'currency-api (jsDelivr)');
 
   const allHang = fakeFetch([['https://', hang]]);
-  const result = await createRatesProvider({ fetch: allHang, now: fixedNow, timeoutMs: 20 })(RATES_JSON);
-  assert.match(result.warning, /Frankfurter: timeout; currency-api \(jsDelivr\): timeout; currency-api \(pages\.dev\): timeout/);
+  await assert.rejects(
+    createRatesProvider({ fetch: allHang, now: fixedNow, timeoutMs: 20 })(RATES_JSON),
+    /Frankfurter: timeout; currency-api \(jsDelivr\): timeout; currency-api \(pages\.dev\): timeout/,
+  );
 });
 
 test('cache: one fetch per day, shared by concurrent calls', async () => {
@@ -207,12 +203,12 @@ test('failure cache: retried only after retryMs', async () => {
   ]);
   const getRates = createRatesProvider({ fetch, now: () => current, retryMs: 60_000 });
 
-  assert.equal((await getRates(RATES_JSON)).source, FILE_SOURCE);
+  await assert.rejects(getRates(RATES_JSON), /HTTP 503/);
   assert.equal(fetch.calls.length, 3);
 
   up = true;
   current = new Date(current.getTime() + 59_000);
-  assert.equal((await getRates(RATES_JSON)).source, FILE_SOURCE);
+  await assert.rejects(getRates(RATES_JSON), /HTTP 503/);
   assert.equal(fetch.calls.length, 3);
 
   current = new Date(current.getTime() + 2_000);
@@ -230,4 +226,13 @@ test('template codes drive the quotes', async () => {
     'https://api.frankfurter.dev/v2/rates?date=2026-10-16&base=USD&quotes=PLN,EUR',
   ]);
   assert.deepEqual(ratesOf(result), { PLN: 3.8906, EUR: 0.89089, USD: 1 });
+});
+
+test('default currencies: PLN, EUR, USD, RUB with USD as base', async () => {
+  assert.equal(CURRENCIES.base, 'USD');
+  assert.deepEqual(CURRENCIES.currencies.map((c) => c.code), ['PLN', 'EUR', 'USD', 'RUB']);
+  const fetch = fakeFetch([['https://api.frankfurter.dev/', () => json(frankfurterRows())]]);
+  const result = await createRatesProvider({ fetch, now: fixedNow })();
+  assert.deepEqual(fetch.calls, [FRANKFURTER]);
+  assert.deepEqual(ratesOf(result), { PLN: 3.8906, EUR: 0.89089, USD: 1, RUB: 83.75 });
 });

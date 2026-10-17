@@ -107,10 +107,6 @@ h2 {
   color: var(--danger);
 }
 
-.panel .banner {
-  margin: 12px 0;
-}
-
 button {
   font: inherit;
   color: inherit;

@@ -14,19 +14,18 @@ Tests: `node --test`
 
 ## Data files
 
-Both files are read from disk on every page load, so edit a file and reload; no restart is needed (except to force a refetch of exchange rates, see below).
+`data/presets.json` is read from disk on every page load, so edit it and reload; no restart is needed.
 
-### `data/exchange-rates.json`
+### Exchange rates
 
-This file sets the currency codes, symbols, column order (the order of `currencies`) and the base currency. Each `rate` is how many units of that currency one unit of the base currency (USD) buys; the base currency must have rate 1.
+The currencies (PLN, EUR, USD, RUB), their symbols, column order and the base currency (USD) are set by `CURRENCIES` in `exchange-rates.js`. Each rate is how many units of that currency one USD buys.
 
-The rates actually used come from a public API (no key) for yesterday's local date, served to the page by the server at `/api/exchange-rates`:
+Rates come from a public API (no key) for yesterday's local date, served to the page by the server at `/api/exchange-rates`:
 
 1. [Frankfurter v2](https://frankfurter.dev) (`api.frankfurter.dev`), blended rates.
 2. [fawazahmed0 currency-api](https://github.com/fawazahmed0/exchange-api) on jsDelivr, then its `currency-api.pages.dev` mirror.
-3. The rates in this file, with a warning shown in the page that they may be out of date.
 
-Results are cached in server memory per day; a failure is retried after 5 minutes. Restart the server to force a refetch. On weekends and holidays the API may return the latest earlier date, which the page shows. API results are never written back to the file.
+If every source fails, the endpoint answers 502 and the page shows the reason in an error banner. Results are cached in server memory per day; a failure is retried after 5 minutes. Restart the server to force a refetch. On weekends and holidays the API may return the latest earlier date, which the page shows.
 
 Rates can also be edited in the page. Those edits apply to the open page only; "Reset rates" reloads them from the server.
 
@@ -45,7 +44,7 @@ A JSON array of the rates shown in the sidebar. Each entry is an object:
 | Field | Required | Value |
 |---|---|---|
 | `amount` | yes | a number, or `[min, max]` for a range |
-| `currency` | yes | a `code` from `data/exchange-rates.json` |
+| `currency` | yes | a currency code from `CURRENCIES` in `exchange-rates.js` |
 | `period` | yes | `hourly`, `daily`, `monthly` or `annual` |
 | `label` | no | text shown in the sidebar; defaults to the amount and currency |
 

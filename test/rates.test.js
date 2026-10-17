@@ -1,22 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateRatesConfig } from '../public/js/rates.js';
-import { RATES_JSON, readData } from './fixtures.js';
+import { RATES_JSON } from './fixtures.js';
 
 const withCurrencies = (edit) => {
   const json = structuredClone(RATES_JSON);
   edit(json);
   return validateRatesConfig(json);
 };
-
-test('the shipped exchange-rates.json is valid', () => {
-  const result = validateRatesConfig(readData('exchange-rates.json'));
-  assert.equal(result.ok, true, result.error);
-  assert.deepEqual(
-    result.config.currencies.map((c) => c.code),
-    ['PLN', 'EUR', 'USD', 'RUB'],
-  );
-});
 
 test('valid config exposes rates and symbols', () => {
   const { config } = validateRatesConfig(RATES_JSON);

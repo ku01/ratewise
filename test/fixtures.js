@@ -4,8 +4,8 @@ import { validateRatesConfig } from '../public/js/rates.js';
 export const readData = (name) =>
   JSON.parse(readFileSync(new URL(`../data/${name}`, import.meta.url), 'utf8'));
 
-// Fixed copy of the placeholder rates, so the examples below do not change
-// when data/exchange-rates.json is updated with real numbers.
+// Fixed rates for the currencies in CURRENCIES (exchange-rates.js), so the
+// examples below do not depend on live exchange rates.
 export const RATES_JSON = {
   base: 'USD',
   currencies: [

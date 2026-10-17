@@ -1,9 +1,19 @@
 import { validateRatesConfig } from './public/js/rates.js';
 
 // Server-only: fetches exchange rates for yesterday's local date from public
-// APIs (no key), falling back to the rates in data/exchange-rates.json.
+// APIs (no key).
 
-export const FILE_SOURCE = 'data/exchange-rates.json';
+// Currency codes, symbols, column order and base currency shown in the page.
+// Rates are always fetched; the base currency gets rate 1.
+export const CURRENCIES = {
+  base: 'USD',
+  currencies: [
+    { code: 'PLN', symbol: 'zł' },
+    { code: 'EUR', symbol: '€' },
+    { code: 'USD', symbol: '$' },
+    { code: 'RUB', symbol: '₽' },
+  ],
+};
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const pad = (n) => String(n).padStart(2, '0');
@@ -81,8 +91,8 @@ export const SOURCES = [
   },
 ];
 
-// Returns getRates(template) -> Promise<response object>; never rejects.
-// `template` is the parsed data/exchange-rates.json (already known to be valid).
+// Returns getRates(template = CURRENCIES) -> Promise<response object>.
+// Rejects with an Error listing every source's failure if no source works.
 export function createRatesProvider({
   fetch = globalThis.fetch,
   now = () => new Date(),
@@ -125,7 +135,7 @@ export function createRatesProvider({
     return { errors };
   }
 
-  return async function getRates(template) {
+  return async function getRates(template = CURRENCIES) {
     const { base } = template;
     const quotes = template.currencies.map((c) => c.code).filter((code) => code !== base);
     const requestedDate = localYesterday(now());
@@ -146,22 +156,9 @@ export function createRatesProvider({
     }
     const live = await cache.promise;
 
-    const fallback = (errors) => {
-      const warning =
-        `Live exchange rates for ${requestedDate} are unavailable (${errors.join('; ')}). ` +
-        `Using the rates from ${FILE_SOURCE}, which may be out of date.`;
-      return {
-        base,
-        currencies: template.currencies.map(({ code, symbol, rate }) => ({ code, symbol, rate })),
-        requestedDate,
-        date: null,
-        source: FILE_SOURCE,
-        sourceUrl: null,
-        warning,
-      };
-    };
-
-    if (live.errors) return fallback(live.errors);
+    if (live.errors) {
+      throw new Error(`Exchange rates for ${requestedDate} are unavailable (${live.errors.join('; ')}).`);
+    }
 
     const merged = {
       base,
@@ -174,10 +171,9 @@ export function createRatesProvider({
       date: live.date,
       source: live.source,
       sourceUrl: live.sourceUrl,
-      warning: null,
     };
     const check = validateRatesConfig(merged);
-    if (!check.ok) return fallback([`${live.source}: ${check.error}`]);
+    if (!check.ok) throw new Error(`Exchange rates for ${requestedDate}: ${live.source}: ${check.error}`);
     return merged;
   };
 }

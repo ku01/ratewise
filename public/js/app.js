@@ -11,7 +11,7 @@ const PRESETS_URL = 'data/presets.json';
 // All state lives here and is lost on reload; nothing is written back.
 const state = {
   ratesConfig: null, // as loaded from the API endpoint
-  ratesMeta: null, // {requestedDate, date, source, warning}
+  ratesMeta: null, // {requestedDate, date, source}
   rates: {}, // in-page, editable copy: {CODE: rate}
   anchor: null, // last user-entered cell: {period, currency, min, max, text}
   presetEntries: null, // raw presets file content
@@ -63,8 +63,8 @@ async function loadRates() {
   if (!result.ok) throw new Error(`${RATES_URL}: ${result.error}`);
   state.ratesConfig = result.config;
   state.rates = { ...result.config.rates };
-  const { requestedDate = null, date = null, source = RATES_URL, warning = null } = json;
-  state.ratesMeta = { requestedDate, date, source, warning };
+  const { requestedDate = null, date = null, source = RATES_URL } = json;
+  state.ratesMeta = { requestedDate, date, source };
   if (state.anchor && !(state.anchor.currency in state.rates)) state.anchor = null;
 }
 
@@ -251,16 +251,13 @@ function renderRates() {
 }
 
 function renderRatesMeta() {
-  const { requestedDate, date, source, warning } = state.ratesMeta;
+  const { requestedDate, date, source } = state.ratesMeta;
   let text = `Rates from ${source}`;
   if (date) {
     text = `Rates as of ${date} · ${source}`;
     if (requestedDate && date < requestedDate) text += ` (latest available for ${requestedDate})`;
   }
   el('rates-source').textContent = text;
-  const box = el('rates-warning');
-  box.textContent = warning ?? '';
-  box.hidden = !warning;
 }
 
 function commitRate(input) {
