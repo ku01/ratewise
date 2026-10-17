@@ -6,8 +6,6 @@ import { createRatesProvider } from './exchange-rates.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const DATA_DIR = path.join(ROOT, 'data');
-const DATA_FILES = new Set(['/data/presets.json']);
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 const RATES_API = '/api/exchange-rates';
@@ -28,10 +26,8 @@ function send(res, status, body, type = 'text/plain; charset=utf-8') {
 
 function resolveFile(pathname) {
   if (pathname === '/') return path.join(PUBLIC_DIR, 'index.html');
-  const root = DATA_FILES.has(pathname) ? ROOT : PUBLIC_DIR;
-  const file = path.resolve(root, `.${pathname}`);
-  const allowed = DATA_FILES.has(pathname) ? DATA_DIR : PUBLIC_DIR;
-  return file.startsWith(allowed + path.sep) ? file : null;
+  const file = path.resolve(PUBLIC_DIR, `.${pathname}`);
+  return file.startsWith(PUBLIC_DIR + path.sep) ? file : null;
 }
 
 // Exchange rates for yesterday's local date are fetched from public APIs by
@@ -47,9 +43,8 @@ async function serveRates(req, res) {
   send(res, 200, req.method === 'HEAD' ? undefined : body, CONTENT_TYPES['.json']);
 }
 
-// Files are read from disk on every request, so editing a data file and
-// reloading the page is enough. Exchange rates come
-// from /api/exchange-rates, which is cached per day.
+// Files are read from disk on every request. Exchange rates come from
+// /api/exchange-rates, which is cached per day.
 const server = createServer(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed');
 

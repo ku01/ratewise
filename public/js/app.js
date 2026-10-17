@@ -4,20 +4,39 @@ import { formatRange } from './format.js';
 import { parseAmount, parseNumber } from './parse.js';
 import { resolvePreset } from './presets.js';
 import { validateRatesConfig } from './rates.js';
+import { loadSaved, makePresetEntry, save } from './storage.js';
 
 const RATES_URL = 'api/exchange-rates';
-const PRESETS_URL = 'data/presets.json';
 
-// All state lives here and is lost on reload; nothing is written back.
+// localStorage can be missing or throw (private mode, blocked site data).
+const storage = (() => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+})();
+
+// anchor, presetEntries and selectedPreset are saved to localStorage on every
+// change. Exchange rates live in the page only.
 const state = {
   ratesConfig: null, // as loaded from the API endpoint
   ratesMeta: null, // {requestedDate, date, source}
   rates: {}, // in-page, editable copy: {CODE: rate}
   anchor: null, // last user-entered cell: {period, currency, min, max, text}
-  presetEntries: null, // raw presets file content
-  presets: [],
+  presetEntries: [], // saved presets: {amount, currency, period, label?}
+  presets: [], // presetEntries resolved against the loaded rates
   selectedPreset: -1,
+  editingPreset: -1,
 };
+
+function persist() {
+  save(storage, {
+    anchor: state.anchor,
+    presets: state.presetEntries,
+    selectedPreset: state.selectedPreset,
+  });
+}
 
 const el = (id) => document.getElementById(id);
 const matrix = el('matrix');
@@ -68,25 +87,10 @@ async function loadRates() {
   if (state.anchor && !(state.anchor.currency in state.rates)) state.anchor = null;
 }
 
-async function loadPresets() {
-  const error = el('presets-error');
-  error.hidden = true;
-  try {
-    const entries = await fetchJson(PRESETS_URL);
-    if (!Array.isArray(entries)) throw new Error(`${PRESETS_URL}: expected a JSON array`);
-    state.presetEntries = entries;
-  } catch (e) {
-    state.presetEntries = [];
-    error.textContent = e.message;
-    error.hidden = false;
-  }
-}
-
 function resolvePresets() {
   state.presets = state.presetEntries.map((entry, i) =>
     resolvePreset(entry, state.ratesConfig, CONFIG, i),
   );
-  state.selectedPreset = -1;
 }
 
 // ---- Table ----
@@ -163,6 +167,7 @@ function commitCell(input) {
         text: text.trim(),
       };
   state.selectedPreset = -1;
+  persist();
   renderTable();
   renderPresets();
 }
@@ -195,20 +200,56 @@ function wireInputs(container, commit) {
 
 // ---- Presets ----
 
+function presetRow(preset, i) {
+  const meta = preset.ok ? preset.period : `Cannot read: ${preset.error}`;
+  const button = make('button', { type: 'button', className: 'preset', disabled: !preset.ok }, [
+    make('span', { className: 'preset-label', textContent: preset.label }),
+    make('span', { className: 'preset-meta', textContent: meta }),
+  ]);
+  button.dataset.index = i;
+  button.classList.toggle('is-selected', i === state.selectedPreset);
+  if (!preset.ok) button.title = preset.error;
+  const edit = make('button', { type: 'button', className: 'preset-edit', textContent: 'Edit' });
+  edit.dataset.index = i;
+  edit.setAttribute('aria-label', `Edit ${preset.label}`);
+  return make('li', { className: 'preset-row' }, [button, edit]);
+}
+
+function select(name, options, value) {
+  const node = make('select', { name }, options.map(([v, text]) => make('option', { value: v, textContent: text })));
+  node.value = options.some(([v]) => v === value) ? value : options[0][0];
+  return node;
+}
+
+function presetForm(entry, preset, i) {
+  const amount = preset.ok
+    ? formatRange(preset.min, preset.max, 2)
+    : [entry.amount ?? ''].flat().join('-');
+  const field = (labelText, control) => make('label', {}, [make('span', { textContent: labelText }), control]);
+  const form = make('form', { className: 'preset-form' }, [
+    field('Label', make('input', { name: 'label', type: 'text', autocomplete: 'off', value: entry.label ?? '', placeholder: 'Optional' })),
+    field('Amount', make('input', { name: 'amount', type: 'text', inputMode: 'decimal', autocomplete: 'off', value: amount })),
+    field('Currency', select('currency', state.ratesConfig.currencies.map((c) => [c.code, `${c.symbol} ${c.code}`]), entry.currency)),
+    field('Period', select('period', CONFIG.periods.map((p) => [p, capitalize(p)]), entry.period)),
+    make('p', { className: 'note error', hidden: true }),
+    make('div', { className: 'preset-actions' }, [
+      make('button', { type: 'submit', textContent: 'Save' }),
+      make('button', { type: 'button', textContent: 'Cancel', value: 'cancel' }),
+      make('button', { type: 'button', className: 'danger', textContent: 'Delete', value: 'delete' }),
+    ]),
+  ]);
+  form.dataset.index = i;
+  return make('li', {}, [form]);
+}
+
 function renderPresets() {
   presetsList.replaceChildren(
-    ...state.presets.map((preset, i) => {
-      const meta = preset.ok ? preset.period : `Cannot read: ${preset.error}`;
-      const button = make('button', { type: 'button', className: 'preset', disabled: !preset.ok }, [
-        make('span', { className: 'preset-label', textContent: preset.label }),
-        make('span', { className: 'preset-meta', textContent: meta }),
-      ]);
-      button.dataset.index = i;
-      button.classList.toggle('is-selected', i === state.selectedPreset);
-      if (!preset.ok) button.title = preset.error;
-      return make('li', {}, [button]);
-    }),
+    ...state.presets.map((preset, i) =>
+      i === state.editingPreset ? presetForm(state.presetEntries[i], preset, i) : presetRow(preset, i),
+    ),
   );
+  el('presets-empty').hidden = state.presets.length > 0;
+  el('add-preset').disabled = !state.anchor;
 }
 
 function applyPreset(index) {
@@ -224,8 +265,92 @@ function applyPreset(index) {
     text: formatRange(preset.min, preset.max, 2),
   };
   state.selectedPreset = index;
+  persist();
   renderTable();
   renderPresets();
+}
+
+function editPreset(index) {
+  state.editingPreset = index;
+  renderPresets();
+  presetsList.querySelector('.preset-form input[name="label"]')?.focus();
+}
+
+function closeEditor() {
+  const index = state.editingPreset;
+  state.editingPreset = -1;
+  renderPresets();
+  presetsList.querySelector(`.preset-edit[data-index="${index}"]`)?.focus();
+}
+
+// Saves the current table value as a new preset and opens it for naming.
+function addPreset() {
+  if (!state.anchor) return;
+  state.presetEntries.push(makePresetEntry(state.anchor));
+  resolvePresets();
+  state.selectedPreset = state.presetEntries.length - 1;
+  persist();
+  editPreset(state.selectedPreset);
+}
+
+function savePresetForm(form) {
+  const index = Number(form.dataset.index);
+  const { label, amount, currency, period } = form.elements;
+  const parsed = parseAmount(amount.value);
+  const error = form.querySelector('.error');
+  if (!parsed.ok || parsed.empty) {
+    error.textContent = parsed.ok ? 'Enter an amount.' : parsed.error;
+    error.hidden = false;
+    setInvalid(amount, true);
+    amount.focus();
+    return;
+  }
+  state.presetEntries[index] = makePresetEntry({
+    min: parsed.min,
+    max: parsed.max,
+    currency: currency.value,
+    period: period.value,
+    label: label.value,
+  });
+  resolvePresets();
+  state.editingPreset = -1;
+  if (index === state.selectedPreset) {
+    applyPreset(index);
+  } else {
+    persist();
+    renderPresets();
+  }
+  presetsList.querySelector(`.preset-edit[data-index="${index}"]`)?.focus();
+}
+
+function deletePreset(index) {
+  state.presetEntries.splice(index, 1);
+  resolvePresets();
+  if (state.selectedPreset === index) state.selectedPreset = -1;
+  else if (state.selectedPreset > index) state.selectedPreset -= 1;
+  state.editingPreset = -1;
+  persist();
+  renderPresets();
+  el('add-preset').focus();
+}
+
+function wirePresets() {
+  presetsList.addEventListener('click', (e) => {
+    const button = e.target.closest('button');
+    if (!button) return;
+    if (button.matches('.preset')) applyPreset(Number(button.dataset.index));
+    else if (button.matches('.preset-edit')) editPreset(Number(button.dataset.index));
+    else if (button.value === 'cancel') closeEditor();
+    else if (button.value === 'delete') deletePreset(state.editingPreset);
+  });
+  presetsList.addEventListener('submit', (e) => {
+    e.preventDefault();
+    savePresetForm(e.target);
+  });
+  presetsList.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && e.target.closest('.preset-form')) closeEditor();
+  });
+  el('add-preset').addEventListener('click', addPreset);
 }
 
 // ---- Exchange rates ----
@@ -306,11 +431,13 @@ function showBanner(message) {
 async function init() {
   wireInputs(matrix, commitCell);
   wireInputs(ratesList, commitRate);
-  presetsList.addEventListener('click', (e) => {
-    const button = e.target.closest('button.preset');
-    if (button) applyPreset(Number(button.dataset.index));
-  });
+  wirePresets();
   el('reset-rates').addEventListener('click', resetRates);
+
+  const saved = loadSaved(storage, CONFIG);
+  state.anchor = saved.anchor;
+  state.presetEntries = saved.presets;
+  state.selectedPreset = saved.selectedPreset;
 
   try {
     await loadRates();
@@ -319,20 +446,13 @@ async function init() {
     showBanner(e.message);
     return;
   }
-  await loadPresets();
   resolvePresets();
   buildTable();
   renderRates();
   renderRatesMeta();
+  renderTable();
+  renderPresets();
   el('main').hidden = false;
-
-  const first = state.presets.findIndex((p) => p.ok);
-  if (first >= 0) {
-    applyPreset(first);
-  } else {
-    renderTable();
-    renderPresets();
-  }
 }
 
 init();

@@ -12,11 +12,7 @@ Then open http://127.0.0.1:3000. Set `PORT` to use another port. There are no de
 
 Tests: `node --test`
 
-## Data files
-
-`data/presets.json` is read from disk on every page load, so edit it and reload; no restart is needed.
-
-### Exchange rates
+## Exchange rates
 
 The currencies (PLN, EUR, USD, RUB), their symbols, column order and the base currency (USD) are set by `CURRENCIES` in `exchange-rates.js`. Each rate is how many units of that currency one USD buys.
 
@@ -29,30 +25,17 @@ If every source fails, the endpoint answers 502 and the page shows the reason in
 
 Rates can also be edited in the page. Those edits apply to the open page only; "Reset rates" reloads them from the server.
 
-### `data/presets.json`
+## Saved state and presets
 
-A JSON array of the rates shown in the sidebar. Each entry is an object:
+On first open the table holds 0 USD hourly and there are no presets. The entered cell and the presets are saved in the browser's `localStorage` (key `income-rates`) on every change and restored on reload. Exchange rate edits are not saved.
 
-```json
-[
-  { "amount": 5000, "currency": "USD", "period": "monthly" },
-  { "amount": [300, 320], "currency": "USD", "period": "daily" },
-  { "amount": 25000, "currency": "PLN", "period": "monthly", "label": "Target offer" }
-]
-```
+In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table.
 
-| Field | Required | Value |
-|---|---|---|
-| `amount` | yes | a number, or `[min, max]` for a range |
-| `currency` | yes | a currency code from `CURRENCIES` in `exchange-rates.js` |
-| `period` | yes | `hourly`, `daily`, `monthly` or `annual` |
-| `label` | no | text shown in the sidebar; defaults to the amount and currency |
-
-An entry that does not fit this shape is still listed, disabled, with the reason.
+A saved preset that no longer fits (for example, its currency was removed from `CURRENCIES`) is listed disabled, with the reason.
 
 ## Assumptions
 
 - 8 hours per day, 21 days per month, 12 months per year. Change them in `public/js/config.js`, along with the decimals shown per row.
-- The app is stateless apart from the in-memory exchange-rate cache: the server serves files and fetches rates from `api.frankfurter.dev`, `cdn.jsdelivr.net` or `currency-api.pages.dev` (outbound network), and everything you edit lives in the page until you reload.
+- The server is stateless apart from the in-memory exchange-rate cache: it serves files and fetches rates from `api.frankfurter.dev`, `cdn.jsdelivr.net` or `currency-api.pages.dev` (outbound network). The table value and presets are kept in the browser; exchange rate edits last until you reload.
 - The highlighted cell is the one you last entered. The others are computed from it at full precision, so rounding never accumulates.
 - In a table cell, a single separator followed by exactly three digits is a thousands separator: `1,234` and `1.234` both mean 1234. Exchange rate inputs always read a single separator as a decimal point.

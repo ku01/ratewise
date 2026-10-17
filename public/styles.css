@@ -153,10 +153,69 @@ input.is-invalid {
   gap: 6px;
 }
 
+.preset-row {
+  display: flex;
+  gap: 6px;
+}
+
 .preset {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   text-align: left;
+}
+
+.preset-edit {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preset-form {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+}
+
+.preset-form label {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preset-form input,
+.preset-form select {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.preset-form input[name="label"] {
+  text-align: left;
+}
+
+.preset-form select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.preset-form .note {
+  margin: 0;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.preset-actions .danger {
+  margin-left: auto;
+  color: var(--danger);
 }
 
 .preset.is-selected {
@@ -173,6 +232,7 @@ input.is-invalid {
 .preset-label {
   display: block;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .preset-meta {

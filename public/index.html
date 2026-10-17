@@ -15,9 +15,12 @@
 
   <div class="layout">
     <aside class="sidebar">
-      <h2>Presets</h2>
+      <div class="panel-head">
+        <h2>Presets</h2>
+        <button id="add-preset" type="button" disabled>Save current</button>
+      </div>
       <ul id="presets" class="presets"></ul>
-      <p id="presets-error" class="note error" hidden></p>
+      <p id="presets-empty" class="note">No presets yet. Enter a rate in the table and click "Save current".</p>
     </aside>
 
     <main id="main" hidden>

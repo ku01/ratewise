@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG } from '../public/js/config.js';
 import { resolvePreset } from '../public/js/presets.js';
-import { RATES_CONFIG, readData } from './fixtures.js';
+import { RATES_CONFIG } from './fixtures.js';
 
 const resolve = (entry, index) => resolvePreset(entry, RATES_CONFIG, CONFIG, index);
 
@@ -52,13 +52,4 @@ test('resolvePreset: errors keep a label', () => {
   assert.equal(resolve({ amount: 1, currency: 'GBP', period: 'daily', label: 'Mine' }).label, 'Mine');
   assert.match(resolve({ amount: 1, currency: 'GBP', period: 'daily' }).error, /unknown currency "GBP"/);
   assert.match(resolve({ amount: 1, currency: 'USD', period: 'weekly' }).error, /unknown period "weekly"/);
-});
-
-test('the shipped presets.json resolves with no errors', () => {
-  const presets = readData('presets.json');
-  assert.ok(Array.isArray(presets) && presets.length > 0);
-  presets.forEach((entry, i) => {
-    const resolved = resolvePreset(entry, RATES_CONFIG, CONFIG, i);
-    assert.equal(resolved.ok, true, `${JSON.stringify(entry)}: ${resolved.error}`);
-  });
 });
