@@ -97,10 +97,13 @@ h2 {
 }
 
 .status {
-  min-height: 1.45em;
   margin: 8px 0 0;
   font-size: 13px;
   color: var(--danger);
+}
+
+.status:empty {
+  display: none;
 }
 
 .banner {
