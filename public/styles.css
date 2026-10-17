@@ -247,6 +247,39 @@ input.is-invalid {
 
 /* Table */
 
+.currency-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.currency-tools[hidden] {
+  display: none;
+}
+
+.currency-tools select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.col-remove {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-color: transparent;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.col-remove:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .matrix {
   width: 100%;
   border-collapse: separate;

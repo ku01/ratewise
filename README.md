@@ -1,6 +1,6 @@
 # Income rate matrix
 
-A table of income rates: hourly, daily, monthly and annual, in PLN, EUR, USD and RUB. Edit any cell and the other 15 are recalculated. A value can be a single number (`120`) or a range (`100-120`).
+A table of income rates: hourly, daily, monthly and annual, in the currencies you choose (PLN, EUR, USD, RUB). Edit any cell and the others are recalculated. A value can be a single number (`120`) or a range (`100-120`).
 
 ## Run
 
@@ -14,7 +14,7 @@ Tests: `node --test`
 
 ## Exchange rates
 
-The currencies (PLN, EUR, USD, RUB), their symbols, column order and the base currency (USD) are set by `CURRENCIES` in `exchange-rates.js`. Each rate is how many units of that currency one USD buys.
+The currencies you can add (PLN, EUR, USD, RUB), their symbols, their order in the "Add currency…" list and the base currency (USD) are set by `CURRENCIES` in `exchange-rates.js`. Each rate is how many units of that currency one USD buys.
 
 Rates come from a public API (no key) for yesterday's local date, served to the page by the server at `/api/exchange-rates`:
 
@@ -27,9 +27,11 @@ Rates can also be edited in the page. Those edits apply to the open page only; "
 
 ## Saved state and presets
 
-On first open the table holds 0 USD hourly and there are no presets. The entered cell and the presets are saved in the browser's `localStorage` (key `income-rates`) on every change and restored on reload. Exchange rate edits are not saved.
+On first open the table has one currency, USD, holds 0 USD hourly, and there are no presets. "Add currency…" above the table adds a column; × in a column header removes it (the last column stays). Removing the column of the entered cell moves the value to the first remaining column. The exchange rates panel lists only the shown currencies.
 
-In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table.
+The shown currencies, the entered cell and the presets are saved in the browser's `localStorage` (key `income-rates`) on every change and restored on reload. Exchange rate edits are not saved.
+
+In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table; if its currency is hidden, the column is added.
 
 A saved preset that no longer fits (for example, its currency was removed from `CURRENCIES`) is listed disabled, with the reason.
 

@@ -1,8 +1,9 @@
-// What the user changes (the entered cell and the presets) is kept in
-// localStorage under one key. Exchange rates are not saved.
+// What the user changes (the shown currencies, the entered cell and the
+// presets) is kept in localStorage under one key. Exchange rates are not saved.
 export const STORAGE_KEY = 'income-rates';
 
 export const DEFAULT_ANCHOR = { period: 'hourly', currency: 'USD', min: 0, max: 0, text: '0' };
+export const DEFAULT_CURRENCIES = ['USD'];
 
 const isAmount = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
 const isObject = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -19,11 +20,17 @@ function validAnchor(a, config) {
   );
 }
 
-// Returns {anchor, presets, selectedPreset}. Missing or broken data falls back
-// to the defaults: 0 USD hourly and no presets. A saved anchor of null means
-// the user cleared the table, and stays cleared.
+// Returns {currencies, anchor, presets, selectedPreset}. Missing or broken
+// data falls back to the defaults: a USD column, 0 USD hourly and no presets.
+// A saved anchor of null means the user cleared the table, and stays cleared.
+// Currency codes are not checked against the loaded rates here.
 export function loadSaved(storage, config) {
-  const defaults = { anchor: { ...DEFAULT_ANCHOR }, presets: [], selectedPreset: -1 };
+  const defaults = {
+    currencies: [...DEFAULT_CURRENCIES],
+    anchor: { ...DEFAULT_ANCHOR },
+    presets: [],
+    selectedPreset: -1,
+  };
   let data;
   try {
     data = JSON.parse(storage?.getItem(STORAGE_KEY) ?? 'null');
@@ -32,6 +39,10 @@ export function loadSaved(storage, config) {
   }
   if (!isObject(data)) return defaults;
 
+  let currencies = Array.isArray(data.currencies)
+    ? [...new Set(data.currencies.filter((c) => typeof c === 'string' && c !== ''))]
+    : [];
+  if (currencies.length === 0) currencies = defaults.currencies;
   const presets = Array.isArray(data.presets) ? data.presets.filter(isObject) : [];
   let anchor = defaults.anchor;
   if (data.anchor === null) anchor = null;
@@ -41,12 +52,12 @@ export function loadSaved(storage, config) {
   }
   const i = data.selectedPreset;
   const selectedPreset = Number.isInteger(i) && i >= 0 && i < presets.length ? i : -1;
-  return { anchor, presets, selectedPreset };
+  return { currencies, anchor, presets, selectedPreset };
 }
 
-export function save(storage, { anchor, presets, selectedPreset }) {
+export function save(storage, { currencies, anchor, presets, selectedPreset }) {
   try {
-    storage?.setItem(STORAGE_KEY, JSON.stringify({ anchor, presets, selectedPreset }));
+    storage?.setItem(STORAGE_KEY, JSON.stringify({ currencies, anchor, presets, selectedPreset }));
     return true;
   } catch {
     return false;

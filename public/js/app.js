@@ -17,12 +17,13 @@ const storage = (() => {
   }
 })();
 
-// anchor, presetEntries and selectedPreset are saved to localStorage on every
-// change. Exchange rates live in the page only.
+// columns, anchor, presetEntries and selectedPreset are saved to localStorage
+// on every change. Exchange rates live in the page only.
 const state = {
   ratesConfig: null, // as loaded from the API endpoint
   ratesMeta: null, // {requestedDate, date, source}
   rates: {}, // in-page, editable copy: {CODE: rate}
+  columns: [], // currency codes shown in the table, in order
   anchor: null, // last user-entered cell: {period, currency, min, max, text}
   presetEntries: [], // saved presets: {amount, currency, period, label?}
   presets: [], // presetEntries resolved against the loaded rates
@@ -32,6 +33,7 @@ const state = {
 
 function persist() {
   save(storage, {
+    currencies: state.columns,
     anchor: state.anchor,
     presets: state.presetEntries,
     selectedPreset: state.selectedPreset,
@@ -85,7 +87,13 @@ async function loadRates() {
   const { requestedDate = null, date = null, source = RATES_URL } = json;
   state.ratesMeta = { requestedDate, date, source };
   if (state.anchor && !(state.anchor.currency in state.rates)) state.anchor = null;
+  state.columns = state.columns.filter((code) => code in state.rates);
+  if (state.columns.length === 0) {
+    state.columns = [state.anchor?.currency ?? ('USD' in state.rates ? 'USD' : result.config.base)];
+  }
 }
+
+const currencyOf = (code) => state.ratesConfig.currencies.find((c) => c.code === code);
 
 function resolvePresets() {
   state.presets = state.presetEntries.map((entry, i) =>
@@ -96,12 +104,20 @@ function resolvePresets() {
 // ---- Table ----
 
 function buildTable() {
-  const { currencies } = state.ratesConfig;
+  const currencies = state.columns.map(currencyOf);
+  const removable = currencies.length > 1;
   const head = make('tr', {}, [
     make('td'),
-    ...currencies.map((c) =>
-      make('th', { scope: 'col' }, [c.symbol, make('span', { textContent: c.code })]),
-    ),
+    ...currencies.map((c) => {
+      const children = [c.symbol, make('span', { textContent: c.code })];
+      if (removable) {
+        const remove = make('button', { type: 'button', className: 'col-remove', textContent: '×', title: `Remove ${c.code}` });
+        remove.setAttribute('aria-label', `Remove ${c.code}`);
+        remove.dataset.currency = c.code;
+        children.push(remove);
+      }
+      return make('th', { scope: 'col' }, children);
+    }),
   ]);
   const rows = CONFIG.periods.map((period) =>
     make('tr', {}, [
@@ -117,6 +133,7 @@ function buildTable() {
     ]),
   );
   matrix.replaceChildren(make('thead', {}, [head]), make('tbody', {}, rows));
+  renderCurrencyPicker();
 
   el('assumptions').textContent =
     `${CONFIG.hoursPerDay} h/day, ${CONFIG.daysPerMonth} days/month, ${CONFIG.monthsPerYear} months/year`;
@@ -141,6 +158,64 @@ function renderTable() {
     input.dataset.rendered = text;
     input.classList.toggle('is-anchor', isAnchor);
   }
+}
+
+// ---- Currencies ----
+
+function renderCurrencyPicker() {
+  const picker = el('add-currency');
+  const available = state.ratesConfig.currencies.filter((c) => !state.columns.includes(c.code));
+  picker.replaceChildren(
+    make('option', { value: '', textContent: 'Add currency…', selected: true, defaultSelected: true }),
+    ...available.map((c) => make('option', { value: c.code, textContent: `${c.symbol} ${c.code}` })),
+  );
+  picker.selectedIndex = 0;
+  el('currency-tools').hidden = available.length === 0;
+}
+
+function refreshColumns() {
+  persist();
+  buildTable();
+  renderTable();
+  renderRates();
+}
+
+function addColumn(code) {
+  if (!code || state.columns.includes(code) || !(code in state.rates)) return;
+  state.columns.push(code);
+  refreshColumns();
+}
+
+// Removing the entered cell's column moves the entered value to the first
+// remaining column in the same row, at full precision.
+function removeColumn(code) {
+  if (state.columns.length <= 1) return;
+  const index = state.columns.indexOf(code);
+  if (index < 0) return;
+  state.columns.splice(index, 1);
+  const { anchor } = state;
+  if (anchor?.currency === code) {
+    const to = state.columns[0];
+    const cell = computeTable(anchor, state.rates, CONFIG)[anchor.period][to];
+    state.anchor = {
+      ...anchor,
+      currency: to,
+      min: cell.min,
+      max: cell.max,
+      text: formatRange(cell.min, cell.max, CONFIG.decimals[anchor.period]),
+    };
+  }
+  refreshColumns();
+  const next = state.columns[Math.min(index, state.columns.length - 1)];
+  (matrix.querySelector(`.col-remove[data-currency="${next}"]`) ?? el('add-currency')).focus();
+}
+
+function wireCurrencies() {
+  matrix.addEventListener('click', (e) => {
+    const button = e.target.closest('button.col-remove');
+    if (button) removeColumn(button.dataset.currency);
+  });
+  el('add-currency').addEventListener('change', (e) => addColumn(e.target.value));
 }
 
 function commitCell(input) {
@@ -265,6 +340,12 @@ function applyPreset(index) {
     text: formatRange(preset.min, preset.max, 2),
   };
   state.selectedPreset = index;
+  // A preset in a hidden currency brings its column back.
+  if (!state.columns.includes(preset.currency)) {
+    state.columns.push(preset.currency);
+    buildTable();
+    renderRates();
+  }
   persist();
   renderTable();
   renderPresets();
@@ -356,12 +437,13 @@ function wirePresets() {
 // ---- Exchange rates ----
 
 function renderRates() {
-  const { base, currencies } = state.ratesConfig;
-  const baseSymbol = currencies.find((c) => c.code === base).symbol;
+  const { base } = state.ratesConfig;
+  const baseSymbol = currencyOf(base).symbol;
   ratesList.replaceChildren(
     make('li', { textContent: `Base: ${base}` }),
-    ...currencies
-      .filter((c) => c.code !== base)
+    ...state.columns
+      .filter((code) => code !== base)
+      .map(currencyOf)
       .map((c) => {
         const text = String(state.rates[c.code]);
         const input = make('input', { type: 'text', inputMode: 'decimal', autocomplete: 'off', value: text });
@@ -432,9 +514,11 @@ async function init() {
   wireInputs(matrix, commitCell);
   wireInputs(ratesList, commitRate);
   wirePresets();
+  wireCurrencies();
   el('reset-rates').addEventListener('click', resetRates);
 
   const saved = loadSaved(storage, CONFIG);
+  state.columns = saved.currencies;
   state.anchor = saved.anchor;
   state.presetEntries = saved.presets;
   state.selectedPreset = saved.selectedPreset;
