@@ -20,8 +20,9 @@ export function validateRatesConfig(json) {
       return fail(`rate of ${code} must be a number greater than 0`);
     }
     const symbol = typeof entry.symbol === 'string' && entry.symbol !== '' ? entry.symbol : code;
+    const name = typeof entry.name === 'string' && entry.name !== '' ? entry.name : code;
     rates[code] = rate;
-    currencies.push({ code, symbol, rate });
+    currencies.push({ code, symbol, name, rate });
   }
 
   if (!(json.base in rates)) return fail(`base currency "${json.base}" is not in "currencies"`);

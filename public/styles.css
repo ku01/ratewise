@@ -32,6 +32,9 @@
 }
 
 body {
+  /* Grow past the window with a wide table, keeping the side padding. */
+  width: max-content;
+  min-width: 100%;
   margin: 0;
   padding: 24px;
   background: var(--bg);
@@ -55,10 +58,11 @@ h2 {
 
 .layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  /* The main column grows with the table, so many currencies widen the
+     page instead of squeezing the columns. */
+  grid-template-columns: 240px max-content;
   gap: 16px;
   align-items: start;
-  max-width: 1200px;
 }
 
 .sidebar,
@@ -256,14 +260,11 @@ input.is-invalid {
   display: none;
 }
 
-.currency-tools select {
-  font: inherit;
+.currency-tools input {
+  width: 260px;
   font-size: 14px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
   padding: 4px 8px;
+  text-align: left;
 }
 
 .col-remove {
@@ -279,11 +280,7 @@ input.is-invalid {
   border-color: var(--danger);
 }
 
-/* Every currency column has the same fixed width, whatever their number;
-   the table scrolls sideways when it does not fit. */
-.matrix-wrap {
-  overflow-x: auto;
-}
+/* Every currency column has the same fixed width, whatever their number. */
 
 .matrix {
   border-collapse: separate;
@@ -359,11 +356,21 @@ input.is-invalid {
 
 @media (max-width: 700px) {
   body {
+    width: auto;
     padding: 16px;
   }
 
   .layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* On a phone the table scrolls inside its panel instead. */
+  .matrix-wrap {
+    overflow-x: auto;
+  }
+
+  .currency-tools input {
+    width: 100%;
   }
 
   .matrix {

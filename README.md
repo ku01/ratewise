@@ -1,6 +1,6 @@
 # Income rate matrix
 
-A table of income rates: hourly, daily, monthly and annual, in the currencies you choose (PLN, EUR, USD, RUB). Edit any cell and the others are recalculated. A value can be a single number (`120`) or a range (`100-120`).
+A table of income rates: hourly, daily, monthly and annual, in any currencies you choose, as many as you like. Edit any cell and the others are recalculated. A value can be a single number (`120`) or a range (`100-120`).
 
 ## Run
 
@@ -14,7 +14,7 @@ Tests: `node --test`
 
 ## Exchange rates
 
-The currencies you can add (PLN, EUR, USD, RUB), their symbols, their order in the "Add currency…" list and the base currency (USD) are set by `CURRENCIES` in `exchange-rates.js`. Each rate is how many units of that currency one USD buys.
+The server fetches every currency the API has (about 155) against the base currency, USD (`BASE` in `exchange-rates.js`). Each rate is how many units of that currency one USD buys. Only ISO 4217 codes known to the JavaScript runtime are kept, so metals (XAU) and codes like CNH are dropped, as are rows with a missing or non-positive rate. Symbols and English names come from `Intl`.
 
 Rates come from a public API (no key) for yesterday's local date, served to the page by the server at `/api/exchange-rates`:
 
@@ -27,13 +27,13 @@ Rates can also be edited in the page. Those edits apply to the open page only; "
 
 ## Saved state and presets
 
-On first open the table has one currency, USD, holds 0 USD hourly, and there are no presets. "Add currency…" above the table adds a column; × in a column header removes it (the last column stays). Removing the column of the entered cell moves the value to the first remaining column. The exchange rates panel lists only the shown currencies.
+On first open the table has one currency, USD, holds 0 USD hourly, and there are no presets. "Add currency…" above the table adds a column: type a code or a name (`gbp`, `Japanese Yen`, `swiss`) and press Enter, or pick a suggestion. There is no limit on columns; every column has the same width, and the page grows wider instead of squeezing them. × in a column header removes a column (the last one stays). Removing the column of the entered cell moves the value to the first remaining column. The exchange rates panel lists only the shown currencies.
 
 The shown currencies, the entered cell and the presets are saved in the browser's `localStorage` (key `income-rates`) on every change and restored on reload. Exchange rate edits are not saved.
 
 In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table; if its currency is hidden, the column is added.
 
-A saved preset that no longer fits (for example, its currency was removed from `CURRENCIES`) is listed disabled, with the reason.
+A saved preset that no longer fits (for example, its currency is missing from the day's rates) is listed disabled, with the reason.
 
 ## Assumptions
 

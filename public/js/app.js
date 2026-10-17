@@ -109,14 +109,15 @@ function buildTable() {
   const head = make('tr', {}, [
     make('td'),
     ...currencies.map((c) => {
-      const children = [c.symbol, make('span', { textContent: c.code })];
+      // Symbols that are just the code (CHF, AED) are not repeated.
+      const children = c.symbol === c.code ? [c.code] : [c.symbol, make('span', { textContent: c.code })];
       if (removable) {
         const remove = make('button', { type: 'button', className: 'col-remove', textContent: '×', title: `Remove ${c.code}` });
         remove.setAttribute('aria-label', `Remove ${c.code}`);
         remove.dataset.currency = c.code;
         children.push(remove);
       }
-      return make('th', { scope: 'col' }, children);
+      return make('th', { scope: 'col', title: c.name }, children);
     }),
   ]);
   const rows = CONFIG.periods.map((period) =>
@@ -162,15 +163,44 @@ function renderTable() {
 
 // ---- Currencies ----
 
+const currencyLabel = (c) => (c.symbol === c.code ? c.name : `${c.name} (${c.symbol})`);
+
+// The picker is a text box with suggestions, matched by code or name.
 function renderCurrencyPicker() {
-  const picker = el('add-currency');
   const available = state.ratesConfig.currencies.filter((c) => !state.columns.includes(c.code));
-  picker.replaceChildren(
-    make('option', { value: '', textContent: 'Add currency…', selected: true, defaultSelected: true }),
-    ...available.map((c) => make('option', { value: c.code, textContent: `${c.symbol} ${c.code}` })),
+  el('currency-list').replaceChildren(
+    ...available.map((c) => make('option', { value: c.code, label: currencyLabel(c) })),
   );
-  picker.selectedIndex = 0;
   el('currency-tools').hidden = available.length === 0;
+}
+
+// Text typed in the picker → {code} of a currency not yet shown, or {error}.
+function findCurrency(text) {
+  const typed = text.trim();
+  const query = typed.toLowerCase();
+  if (state.columns.includes(typed.toUpperCase())) return { error: `${typed.toUpperCase()} is already in the table.` };
+  const available = state.ratesConfig.currencies.filter((c) => !state.columns.includes(c.code));
+  const exact = available.find((c) => c.code.toLowerCase() === query || c.name.toLowerCase() === query);
+  if (exact) return { code: exact.code };
+  const partial = available.filter((c) => c.name.toLowerCase().includes(query));
+  if (partial.length === 1) return { code: partial[0].code };
+  if (partial.length > 1) return { error: `"${typed}" matches ${partial.length} currencies. Pick one from the list or type its code.` };
+  return { error: `No currency matches "${typed}".` };
+}
+
+function addFromPicker() {
+  const picker = el('add-currency');
+  if (!picker.value.trim()) return;
+  const { code, error } = findCurrency(picker.value);
+  if (error) {
+    setInvalid(picker, true);
+    setStatus(error);
+    return;
+  }
+  setInvalid(picker, false);
+  setStatus();
+  picker.value = '';
+  addColumn(code);
 }
 
 function refreshColumns() {
@@ -215,7 +245,18 @@ function wireCurrencies() {
     const button = e.target.closest('button.col-remove');
     if (button) removeColumn(button.dataset.currency);
   });
-  el('add-currency').addEventListener('change', (e) => addColumn(e.target.value));
+  const picker = el('add-currency');
+  // "change" fires when a suggestion is picked or the box loses focus.
+  picker.addEventListener('change', addFromPicker);
+  picker.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addFromPicker();
+    else if (e.key === 'Escape') {
+      picker.value = '';
+      setInvalid(picker, false);
+      setStatus();
+    }
+  });
+  picker.addEventListener('input', () => setInvalid(picker, false));
 }
 
 function commitCell(input) {
@@ -304,7 +345,7 @@ function presetForm(entry, preset, i) {
   const form = make('form', { className: 'preset-form' }, [
     field('Label', make('input', { name: 'label', type: 'text', autocomplete: 'off', value: entry.label ?? '', placeholder: 'Optional' })),
     field('Amount', make('input', { name: 'amount', type: 'text', inputMode: 'decimal', autocomplete: 'off', value: amount })),
-    field('Currency', select('currency', state.ratesConfig.currencies.map((c) => [c.code, `${c.symbol} ${c.code}`]), entry.currency)),
+    field('Currency', select('currency', state.ratesConfig.currencies.map((c) => [c.code, `${c.code} · ${c.name}`]), entry.currency)),
     field('Period', select('period', CONFIG.periods.map((p) => [p, capitalize(p)]), entry.period)),
     make('p', { className: 'note error', hidden: true }),
     make('div', { className: 'preset-actions' }, [

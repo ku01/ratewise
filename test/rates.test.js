@@ -9,11 +9,14 @@ const withCurrencies = (edit) => {
   return validateRatesConfig(json);
 };
 
-test('valid config exposes rates and symbols', () => {
+test('valid config exposes rates, symbols and names', () => {
   const { config } = validateRatesConfig(RATES_JSON);
   assert.deepEqual(config.rates, { PLN: 3.65, EUR: 0.859, USD: 1, RUB: 81.3 });
   assert.equal(config.base, 'USD');
-  assert.deepEqual(config.currencies[2], { code: 'USD', symbol: '$', rate: 1 });
+  // A missing name falls back to the code.
+  assert.deepEqual(config.currencies[2], { code: 'USD', symbol: '$', name: 'USD', rate: 1 });
+  const named = { ...RATES_JSON, currencies: [{ code: 'USD', symbol: '$', name: 'US Dollar', rate: 1 }] };
+  assert.equal(validateRatesConfig(named).config.currencies[0].name, 'US Dollar');
 });
 
 test('rejects invalid configs', () => {

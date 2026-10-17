@@ -3,20 +3,14 @@ import { validateRatesConfig } from './public/js/rates.js';
 // Server-only: fetches exchange rates for yesterday's local date from public
 // APIs (no key).
 
-// Currency codes, symbols, column order and base currency shown in the page.
-// Rates are always fetched; the base currency gets rate 1.
-export const CURRENCIES = {
-  base: 'USD',
-  currencies: [
-    { code: 'PLN', symbol: 'zł' },
-    { code: 'EUR', symbol: '€' },
-    { code: 'USD', symbol: '$' },
-    { code: 'RUB', symbol: '₽' },
-  ],
-};
+// All rates are quoted per 1 BASE. Every ISO 4217 currency a source returns is
+// passed to the page, with a symbol and an English name from Intl.
+export const BASE = 'USD';
 
+const ISO_CODES = new Set(Intl.supportedValuesOf('currency'));
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const pad = (n) => String(n).padStart(2, '0');
+const currencyNames = new Intl.DisplayNames('en', { type: 'currency' });
 
 // Local calendar date of the day before `now`, as YYYY-MM-DD.
 export function localYesterday(now = new Date()) {
@@ -24,13 +18,34 @@ export function localYesterday(now = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function checkRates(rates, quotes) {
-  for (const code of quotes) {
-    const r = rates[code];
-    if (!(typeof r === 'number' && Number.isFinite(r) && r > 0)) {
-      throw new Error(`missing or invalid rate for ${code}`);
-    }
+export function currencySymbol(code) {
+  try {
+    const parts = new Intl.NumberFormat('en', { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol' })
+      .formatToParts(0);
+    return parts.find((p) => p.type === 'currency')?.value || code;
+  } catch {
+    return code;
   }
+}
+
+export function currencyName(code) {
+  try {
+    return currencyNames.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+const isRate = (r) => typeof r === 'number' && Number.isFinite(r) && r > 0;
+
+// Keeps ISO currencies other than the base with a valid rate; throws if none is left.
+function cleanRates(raw, base) {
+  const rates = {};
+  for (const [code, rate] of Object.entries(raw)) {
+    if (code !== base && ISO_CODES.has(code) && isRate(rate)) rates[code] = rate;
+  }
+  if (Object.keys(rates).length === 0) throw new Error('no usable rates');
+  return rates;
 }
 
 function checkDate(effective, requested) {
@@ -40,43 +55,38 @@ function checkDate(effective, requested) {
   if (effective > requested) throw new Error(`date ${effective} is after ${requested}`);
 }
 
-// body = parsed JSON; returns {date, rates}; throws on any missing or invalid value.
-export function parseFrankfurter(body, { date, base, quotes }) {
+// body = parsed JSON; returns {date, rates}. Rows with a bad rate or an
+// unknown code are dropped; a wrong base or date rejects the whole response.
+// The effective date is the latest row date.
+export function parseFrankfurter(body, { date, base }) {
   if (!Array.isArray(body)) throw new Error('expected an array');
-  const rates = {};
+  const raw = {};
   let effective = null;
   for (const row of body) {
     if (row?.base !== base) throw new Error(`unexpected base ${JSON.stringify(row?.base)}`);
     checkDate(row.date, date);
-    if (effective === null || row.date < effective) effective = row.date;
-    rates[row.quote] = row.rate;
+    if (effective === null || row.date > effective) effective = row.date;
+    if (typeof row.quote === 'string') raw[row.quote] = row.rate;
   }
-  checkRates(rates, quotes);
-  checkDate(effective, date);
-  return { date: effective, rates: pick(rates, quotes) };
+  const rates = cleanRates(raw, base);
+  return { date: effective, rates };
 }
 
-export function parseCurrencyApi(body, { date, base, quotes }) {
+export function parseCurrencyApi(body, { date, base }) {
   const table = body?.[base.toLowerCase()];
-  const rates = {};
-  for (const code of quotes) rates[code] = table?.[code.toLowerCase()];
-  checkRates(rates, quotes);
+  if (!table || typeof table !== 'object') throw new Error(`no ${base} table`);
   checkDate(body?.date, date);
-  return { date: body.date, rates };
-}
-
-function pick(rates, quotes) {
-  return Object.fromEntries(quotes.map((code) => [code, rates[code]]));
+  const raw = Object.fromEntries(Object.entries(table).map(([code, rate]) => [code.toUpperCase(), rate]));
+  return { date: body.date, rates: cleanRates(raw, base) };
 }
 
 const currencyApiPath = (base) => `/v1/currencies/${base.toLowerCase()}.min.json`;
 
-// Source adapters, tried in order. `quotes` are upper-case codes without the base.
+// Source adapters, tried in order.
 export const SOURCES = [
   {
     name: 'Frankfurter',
-    url: (date, base, quotes) =>
-      `https://api.frankfurter.dev/v2/rates?date=${date}&base=${base}&quotes=${quotes.join(',')}`,
+    url: (date, base) => `https://api.frankfurter.dev/v2/rates?date=${date}&base=${base}`,
     parse: parseFrankfurter,
   },
   {
@@ -91,7 +101,7 @@ export const SOURCES = [
   },
 ];
 
-// Returns getRates(template = CURRENCIES) -> Promise<response object>.
+// Returns getRates() -> Promise<response object>.
 // Rejects with an Error listing every source's failure if no source works.
 export function createRatesProvider({
   fetch = globalThis.fetch,
@@ -103,7 +113,7 @@ export function createRatesProvider({
   let cache = null; // {key, promise, expires}
 
   async function fetchSource(source, ctx) {
-    const url = source.url(ctx.date, ctx.base, ctx.quotes);
+    const url = source.url(ctx.date, ctx.base);
     let res;
     try {
       res = await fetch(url, {
@@ -123,11 +133,11 @@ export function createRatesProvider({
     return { ...source.parse(body, ctx), source: source.name, sourceUrl: url };
   }
 
-  async function fetchLive(date, base, quotes) {
+  async function fetchLive(date, base) {
     const errors = [];
     for (const source of sources) {
       try {
-        return await fetchSource(source, { date, base, quotes });
+        return await fetchSource(source, { date, base });
       } catch (err) {
         errors.push(`${source.name}: ${err?.message || String(err)}`);
       }
@@ -135,15 +145,14 @@ export function createRatesProvider({
     return { errors };
   }
 
-  return async function getRates(template = CURRENCIES) {
-    const { base } = template;
-    const quotes = template.currencies.map((c) => c.code).filter((code) => code !== base);
+  return async function getRates() {
+    const base = BASE;
     const requestedDate = localYesterday(now());
-    const key = `${requestedDate}|${base}|${quotes.join(',')}`;
+    const key = `${requestedDate}|${base}`;
 
     if (!cache || cache.key !== key || now().getTime() >= cache.expires) {
       const entry = { key, expires: Infinity };
-      entry.promise = fetchLive(requestedDate, base, quotes)
+      entry.promise = fetchLive(requestedDate, base)
         .catch((err) => ({ errors: [err?.message || String(err)] }))
         .then((result) => {
           if (result.errors) {
@@ -160,11 +169,13 @@ export function createRatesProvider({
       throw new Error(`Exchange rates for ${requestedDate} are unavailable (${live.errors.join('; ')}).`);
     }
 
+    const codes = [base, ...Object.keys(live.rates)].sort();
     const merged = {
       base,
-      currencies: template.currencies.map(({ code, symbol }) => ({
+      currencies: codes.map((code) => ({
         code,
-        symbol,
+        symbol: currencySymbol(code),
+        name: currencyName(code),
         rate: code === base ? 1 : live.rates[code],
       })),
       requestedDate,
