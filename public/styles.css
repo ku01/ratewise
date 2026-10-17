@@ -86,6 +86,10 @@ h2 {
   gap: 12px;
 }
 
+.panel-head-start {
+  justify-content: flex-start;
+}
+
 .note {
   margin: 12px 0 0;
   font-size: 13px;
