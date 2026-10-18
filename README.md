@@ -45,11 +45,11 @@ Rates can also be edited in the page. Those edits apply to the open page only; "
 
 ## Saved state and presets
 
-On first open the table has one currency, USD, holds 0 USD hourly, and there are no presets. "Add currency…" above the table adds a column: type a code or a name (`gbp`, `Japanese Yen`, `swiss`) and press Enter, or pick a suggestion. There is no limit on columns; every column has the same width, and the page grows wider instead of squeezing them. × in a column header removes a column (the last one stays). Removing the column of the entered cell moves the value to the first remaining column. The exchange rates panel lists only the shown currencies.
+On first open the table has one currency, USD, holds 0 USD hourly, and there are no presets. "Add currency…" above the table adds a column: type a code or a name (`gbp`, `Japanese Yen`, `swiss`) and press Enter, or pick a suggestion. There is no limit on columns; every column has the same width, and the page grows wider instead of squeezing them. × in a column header removes a column (the last one stays). Drag a column header left or right to move the column (on a touch screen, press and hold first); with the keyboard, focus its × and press Alt+← or Alt+→. The exchange rates panel follows the same order. Removing the column of the entered cell moves the value to the first remaining column. The exchange rates panel lists only the shown currencies.
 
 The shown currencies, the entered cell and the presets are saved in the browser's `localStorage` (key `ratewise`) on every change and restored on reload. Exchange rate edits are not saved.
 
-In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table; if its currency is hidden, the column is added.
+In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table; if its currency is hidden, the column is added. Drag a preset up or down to reorder the list (press and hold first on a touch screen), or focus it and press Alt+↑ or Alt+↓. Reordering is off while a preset is open for editing. The column and preset order is saved.
 
 A saved preset that no longer fits (for example, its currency is missing from the day's rates) is listed disabled, with the reason.
 

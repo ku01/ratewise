@@ -4,6 +4,7 @@ import { formatRange } from './format.js';
 import { parseAmount, parseNumber } from './parse.js';
 import { resolvePreset } from './presets.js';
 import { validateRatesConfig } from './rates.js';
+import { makeSortable, moveIndex, moveItem } from './reorder.js';
 import { loadSaved, makePresetEntry, save } from './storage.js';
 
 const RATES_URL = 'api/exchange-rates.json';
@@ -114,10 +115,14 @@ function buildTable() {
       if (removable) {
         const remove = make('button', { type: 'button', className: 'col-remove', textContent: '×', title: `Remove ${c.code}` });
         remove.setAttribute('aria-label', `Remove ${c.code}`);
+        remove.setAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+ArrowRight');
         remove.dataset.currency = c.code;
         children.push(remove);
       }
-      return make('th', { scope: 'col', title: c.name }, children);
+      const th = make('th', { scope: 'col', title: c.name }, children);
+      th.dataset.currency = c.code;
+      th.classList.toggle('is-movable', removable);
+      return th;
     }),
   ]);
   const rows = CONFIG.periods.map((period) =>
@@ -316,10 +321,33 @@ function removeColumn(code) {
   (matrix.querySelector(`.col-remove[data-currency="${next}"]`) ?? el('add-currency')).focus();
 }
 
+function moveColumn(from, to) {
+  if (to < 0 || to >= state.columns.length || to === from) return;
+  state.columns = moveItem(state.columns, from, to);
+  refreshColumns();
+}
+
 function wireCurrencies() {
   matrix.addEventListener('click', (e) => {
     const button = e.target.closest('button.col-remove');
     if (button) removeColumn(button.dataset.currency);
+  });
+  // Drag a column header to move the column; Alt+←/→ on its × button does the same.
+  makeSortable(matrix, {
+    items: 'thead th[data-currency]',
+    ignore: '.col-remove',
+    axis: 'x',
+    canStart: () => state.columns.length > 1,
+    onMove: moveColumn,
+  });
+  matrix.addEventListener('keydown', (e) => {
+    const button = e.target.closest('button.col-remove');
+    if (!button || !e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault();
+    const { currency } = button.dataset;
+    const from = state.columns.indexOf(currency);
+    moveColumn(from, from + (e.key === 'ArrowLeft' ? -1 : 1));
+    matrix.querySelector(`.col-remove[data-currency="${currency}"]`)?.focus();
   });
   const input = el('add-currency');
   const list = el('currency-options');
@@ -422,6 +450,7 @@ function presetRow(preset, i) {
     make('span', { className: 'preset-meta', textContent: meta }),
   ]);
   button.dataset.index = i;
+  button.setAttribute('aria-keyshortcuts', 'Alt+ArrowUp Alt+ArrowDown');
   button.classList.toggle('is-selected', i === state.selectedPreset);
   if (!preset.ok) button.title = preset.error;
   const edit = make('button', { type: 'button', className: 'preset-edit', textContent: 'Edit' });
@@ -555,7 +584,34 @@ function deletePreset(index) {
   el('add-preset').focus();
 }
 
+function movePreset(from, to) {
+  if (to < 0 || to >= state.presetEntries.length || to === from) return;
+  state.presetEntries = moveItem(state.presetEntries, from, to);
+  resolvePresets();
+  state.selectedPreset = moveIndex(state.selectedPreset, from, to);
+  persist();
+  renderPresets();
+}
+
 function wirePresets() {
+  // Drag a preset to move it; Alt+↑/↓ on a focused preset does the same.
+  // Not while one is open for editing.
+  makeSortable(presetsList, {
+    items: '.preset-row',
+    ignore: '.preset-edit',
+    axis: 'y',
+    canStart: () => state.editingPreset < 0,
+    onMove: movePreset,
+  });
+  presetsList.addEventListener('keydown', (e) => {
+    const button = e.target.closest('button.preset');
+    if (!button || !e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    e.preventDefault();
+    const from = Number(button.dataset.index);
+    const to = from + (e.key === 'ArrowUp' ? -1 : 1);
+    movePreset(from, to);
+    presetsList.querySelector(`.preset[data-index="${Math.max(0, Math.min(to, state.presets.length - 1))}"]`)?.focus();
+  });
   presetsList.addEventListener('click', (e) => {
     const button = e.target.closest('button');
     if (!button) return;

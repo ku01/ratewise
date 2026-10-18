@@ -451,3 +451,67 @@ input.is-invalid {
     font-size: 13px;
   }
 }
+
+/* Reordering (drag a column header or a preset) */
+
+.matrix thead th.is-movable,
+.preset-row {
+  position: relative;
+  -webkit-touch-callout: none;
+}
+
+.matrix thead th.is-movable {
+  cursor: grab;
+}
+
+.is-reordering,
+.is-reordering * {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.is-dragging {
+  opacity: 0.4;
+}
+
+.drop-before::before,
+.drop-after::after {
+  content: "";
+  position: absolute;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+/* Between columns: a vertical line in the cell spacing. */
+.matrix th.drop-before::before,
+.matrix th.drop-after::after {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+}
+
+.matrix th.drop-before::before {
+  left: -4px;
+}
+
+.matrix th.drop-after::after {
+  right: -4px;
+}
+
+/* Between presets: a horizontal line in the list gap. */
+.preset-row.drop-before::before,
+.preset-row.drop-after::after {
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+
+.preset-row.drop-before::before {
+  top: -4px;
+}
+
+.preset-row.drop-after::after {
+  bottom: -4px;
+}
