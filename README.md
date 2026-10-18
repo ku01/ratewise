@@ -1,4 +1,4 @@
-# Income rate matrix
+# Ratewise
 
 A table of income rates: hourly, daily, monthly and annual, in any currencies you choose, as many as you like. Edit any cell and the others are recalculated. A value can be a single number (`120`) or a range (`100-120`).
 

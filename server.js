@@ -68,5 +68,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Income rate matrix: http://${HOST}:${PORT}`);
+  console.log(`Ratewise: http://${HOST}:${PORT}`);
 });
