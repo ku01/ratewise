@@ -29,7 +29,7 @@ Rates can also be edited in the page. Those edits apply to the open page only; "
 
 On first open the table has one currency, USD, holds 0 USD hourly, and there are no presets. "Add currency…" above the table adds a column: type a code or a name (`gbp`, `Japanese Yen`, `swiss`) and press Enter, or pick a suggestion. There is no limit on columns; every column has the same width, and the page grows wider instead of squeezing them. × in a column header removes a column (the last one stays). Removing the column of the entered cell moves the value to the first remaining column. The exchange rates panel lists only the shown currencies.
 
-The shown currencies, the entered cell and the presets are saved in the browser's `localStorage` (key `income-rates`) on every change and restored on reload. Exchange rate edits are not saved.
+The shown currencies, the entered cell and the presets are saved in the browser's `localStorage` (key `ratewise`) on every change and restored on reload. Exchange rate edits are not saved.
 
 In the sidebar, "Save current" adds the table's current value as a preset and opens it for editing. "Edit" on a preset changes its label, amount (a number or a range), currency and period, or deletes it. Click a preset to load it into the table; if its currency is hidden, the column is added.
 

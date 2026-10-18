@@ -1,6 +1,6 @@
 // What the user changes (the shown currencies, the entered cell and the
 // presets) is kept in localStorage under one key. Exchange rates are not saved.
-export const STORAGE_KEY = 'income-rates';
+export const STORAGE_KEY = 'ratewise';
 
 export const DEFAULT_ANCHOR = { period: 'hourly', currency: 'USD', min: 0, max: 0, text: '0' };
 export const DEFAULT_CURRENCIES = ['USD'];
