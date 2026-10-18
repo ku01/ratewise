@@ -54,3 +54,7 @@ A saved preset that no longer fits (for example, its currency is missing from th
 - The server is stateless apart from the in-memory exchange-rate cache: it serves files and fetches rates from `api.frankfurter.dev`, `cdn.jsdelivr.net` or `currency-api.pages.dev` (outbound network). The table value and presets are kept in the browser; exchange rate edits last until you reload.
 - The highlighted cell is the one you last entered. The others are computed from it at full precision, so rounding never accumulates.
 - In a table cell, a single separator followed by exactly three digits is a thousands separator: `1,234` and `1.234` both mean 1234. Exchange rate inputs always read a single separator as a decimal point.
+
+## License
+
+[MIT](LICENSE). Exchange rates are provided by the third-party sources listed above, under their own terms.
