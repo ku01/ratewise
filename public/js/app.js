@@ -6,7 +6,7 @@ import { resolvePreset } from './presets.js';
 import { validateRatesConfig } from './rates.js';
 import { loadSaved, makePresetEntry, save } from './storage.js';
 
-const RATES_URL = 'api/exchange-rates';
+const RATES_URL = 'api/exchange-rates.json';
 
 // localStorage can be missing or throw (private mode, blocked site data).
 const storage = (() => {

@@ -8,7 +8,7 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
-const RATES_API = '/api/exchange-rates';
+const RATES_API = '/api/exchange-rates.json';
 
 const getRates = createRatesProvider();
 
@@ -31,7 +31,7 @@ function resolveFile(pathname) {
 }
 
 // Exchange rates for yesterday's local date are fetched from public APIs by
-// /api/exchange-rates and cached in memory per day. If every API fails the
+// /api/exchange-rates.json and cached in memory per day. If every API fails the
 // endpoint answers 502 with the reason, which the page shows in its banner.
 async function serveRates(req, res) {
   let body;
@@ -44,7 +44,7 @@ async function serveRates(req, res) {
 }
 
 // Files are read from disk on every request. Exchange rates come from
-// /api/exchange-rates, which is cached per day.
+// /api/exchange-rates.json, which is cached per day.
 const server = createServer(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed');
 

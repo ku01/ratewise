@@ -8,15 +8,28 @@ A table of income rates: hourly, daily, monthly and annual, in any currencies yo
 node server.js
 ```
 
-Then open http://127.0.0.1:3000. Set `PORT` to use another port. There are no dependencies and no build step.
+Then open http://127.0.0.1:3000. Set `PORT` to use another port. There are no dependencies.
 
 Tests: `node --test`
+
+## Deploy (GitHub Pages)
+
+The published site is static: `npm run build` (`build.js`) copies `public/` to `dist/` and writes the day's rates to `dist/api/exchange-rates.json`, the same JSON the server returns. The build fails if every rate source fails, so a bad day never replaces a working deployment.
+
+`.github/workflows/deploy.yml` runs the tests, builds and deploys to GitHub Pages on every push to `main`, daily at 02:00 UTC (fresh rates), and on demand from the Actions tab ("Run workflow").
+
+One-time setup after pushing the repository to GitHub: Settings → Pages → Build and deployment → Source: **GitHub Actions**. The site is then at `https://<user>.github.io/ratewise/`.
+
+Notes:
+
+- The build runs in UTC, so on the published site "yesterday" is the UTC date, not the visitor's local date.
+- GitHub disables scheduled workflows in a public repository after 60 days without commits. Re-enable it in the Actions tab if rates stop updating.
 
 ## Exchange rates
 
 The server fetches every currency the API has (about 155) against the base currency, USD (`BASE` in `exchange-rates.js`). Each rate is how many units of that currency one USD buys. Only ISO 4217 codes known to the JavaScript runtime are kept, so metals (XAU) and codes like CNH are dropped, as are rows with a missing or non-positive rate. Symbols and English names come from `Intl`.
 
-Rates come from a public API (no key) for yesterday's local date, served to the page by the server at `/api/exchange-rates`:
+Rates come from a public API (no key) for yesterday's local date, served to the page by the server at `/api/exchange-rates.json` (or, on the published site, built into a static file of that name daily):
 
 1. [Frankfurter v2](https://frankfurter.dev) (`api.frankfurter.dev`), blended rates.
 2. [fawazahmed0 currency-api](https://github.com/fawazahmed0/exchange-api) on jsDelivr, then its `currency-api.pages.dev` mirror.
