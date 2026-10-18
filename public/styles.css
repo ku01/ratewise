@@ -47,6 +47,15 @@ h1 {
   font-size: 22px;
 }
 
+/* Note under the page title: tight to the title, same gap below as the title had. */
+h1:has(+ .subtitle) {
+  margin-bottom: 4px;
+}
+
+.note.subtitle {
+  margin: 0 0 16px;
+}
+
 h2 {
   margin: 0;
   white-space: nowrap;
